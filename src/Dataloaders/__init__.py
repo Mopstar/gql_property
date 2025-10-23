@@ -7,6 +7,8 @@ from src.DBDefinitions import (
     EventInvitationModel,
 
 )
+from src.DBDefinitions import purchasemodel
+from src.DBDefinitions.purchasemodel import PurchaseModel, PurchaseItem
 
 from uoishelpers.dataloaders.LoaderMapBase import LoaderMapBase
 from uoishelpers.dataloaders.IDLoader import IDLoader
@@ -20,6 +22,8 @@ class LoaderMap(LoaderMapBase[BaseModel]):
 
     EventModel: IDLoader[src.DBDefinitions.EventModel] = None
     EventInvitationModel: IDLoader[src.DBDefinitions.EventInvitationModel] = None
+    PurchaseModel: IDLoader[src.DBDefinitions.purchasemodel.PurchaseModel] = None
+    PurchaseItem: IDLoader[src.DBDefinitions.purchasemodel.PurchaseItem] = None
 
 
     def __init__(self, session):
@@ -27,6 +31,8 @@ class LoaderMap(LoaderMapBase[BaseModel]):
 
         self.EventModel = self.get(EventModel)
         self.EventInvitationModel = self.get(EventInvitationModel)
+        self.PurchaseModel = self.get(PurchaseModel)
+        self.PurchaseItem = self.get(PurchaseItem)
 
         # print(f"LoaderMap created with session: {session}")
 

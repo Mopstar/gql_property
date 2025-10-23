@@ -28,6 +28,13 @@ class PurchaseModel(BaseModel):
     parent_id_attribute_name = "maininfo_id"
     children_attribute_name = "subinfo"
 
+    path: Mapped[str] = mapped_column(
+        index=True,
+        nullable=True,
+        default=None,
+        comment="Materialized path technique, not implemented"
+    )
+
 
     reason: Mapped[str] = mapped_column(default=None, nullable=True)
     description: Mapped[str] = mapped_column(default=None, nullable=True)
@@ -36,19 +43,37 @@ class PurchaseModel(BaseModel):
     handover_request: Mapped[datetime.datetime] = mapped_column(default=None, nullable=True)
     reasoning: Mapped[str] = mapped_column(default=None, nullable=True)
 
-    masterevent_id: Mapped[IDType] = mapped_column(
+    maininfo_id: Mapped[IDType] = mapped_column(
         ForeignKey("purchases.id"),
         nullable=True,
         default=None,
         index=True,
     )
 
+    # child items (name, quantity, price)
+    subinfo = relationship(
+        "PurchaseItem",
+        back_populates="purchase",
+        uselist=True,
+        init=True,
+        cascade="all, delete-orphan",
+    )
 
-    masterevent = relationship(
+
+
+class PurchaseItem(BaseModel):
+    __tablename__ = "purchase_items"
+
+    purchase_id: Mapped[IDType] = mapped_column(ForeignKey("purchases.id"), index=True, nullable=False)
+
+    name: Mapped[str] = mapped_column(default=None, nullable=True)
+    quantity: Mapped[float] = mapped_column(default=1.0, nullable=False)
+    price: Mapped[float] = mapped_column(default=0.0, nullable=False)
+
+    purchase = relationship(
         "PurchaseModel",
-        viewonly=True, 
-        remote_side="PurchaseModel.id",
-        uselist=False,
         back_populates="subinfo",
+        uselist=False,
+        viewonly=False
     )
     
