@@ -17,7 +17,7 @@ class PurchaseQuery:
 
     purchase_page: typing.List[PurchaseGQLModel] = strawberry.field(
         description="get a page of purchases",
-        resolver=PageResolver[PurchaseGQLModel]()
+        resolver=PageResolver[PurchaseGQLModel](whereType=None)
     )
 
 @strawberry.type(description="""Type for query root""")

@@ -64,7 +64,8 @@ class PurchaseModel(BaseModel):
 class PurchaseItem(BaseModel):
     __tablename__ = "purchase_items"
 
-    purchase_id: Mapped[IDType] = mapped_column(ForeignKey("purchases.id"), index=True, nullable=False)
+    # allow default None to satisfy dataclass field ordering when BaseModel defines defaulted fields
+    purchase_id: Mapped[IDType] = mapped_column(ForeignKey("purchases.id"), index=True, nullable=True, default=None)
 
     name: Mapped[str] = mapped_column(default=None, nullable=True)
     quantity: Mapped[float] = mapped_column(default=1.0, nullable=False)
