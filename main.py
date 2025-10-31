@@ -12,7 +12,7 @@ import logging
 import logging.handlers
 
 from src.GraphTypeDefinitions import schema
-from src.DBDefinitions import startEngine, ComposeConnectionString
+from DBDefinitions import startEngine, ComposeConnectionString
 from src.DBFeeder import initDB
 
 # region logging setup
@@ -186,12 +186,12 @@ logging.info("All initialization is done")
 
 # region ENV setup tests
 def envAssertDefined(name, default=None):
-    result = os.getenv(name, None)
+    result = os.getenv(name, default)
     assert result is not None, f"{name} environment variable must be explicitly defined"
     return result
 
-DEMO = envAssertDefined("DEMO", None)
-GQLUG_ENDPOINT_URL = envAssertDefined("GQLUG_ENDPOINT_URL", None)
+DEMO = envAssertDefined("DEMO", "True")
+GQLUG_ENDPOINT_URL = envAssertDefined("GQLUG_ENDPOINT_URL", "http://localhost:8000/graphql")
 
 assert (DEMO in ["True", "true", "False", "false"]), "DEMO environment variable can have only `True` or `False` values"
 DEMO = DEMO in ["True", "true"]

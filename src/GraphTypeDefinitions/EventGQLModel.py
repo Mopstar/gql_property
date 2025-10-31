@@ -12,15 +12,16 @@ from uoishelpers.gqlpermissions import (
     SimpleDeletePermission
 )    
 from uoishelpers.resolvers import (
-    getLoadersFromInfo, 
+    getLoadersFromInfo,
+    getUserFromInfo,
     createInputs,
     createInputs2,
 
-    InsertError, 
-    Insert, 
-    UpdateError, 
-    Update, 
-    DeleteError, 
+    InsertError,
+    Insert,
+    UpdateError,
+    Update,
+    DeleteError,
     Delete,
 
     PageResolver,
@@ -39,6 +40,7 @@ from .TimeUnit import TimeUnit
 
 EventInvitationGQLModel = typing.Annotated["EventInvitationGQLModel", strawberry.lazy(".EventInvitationGQLModel")]
 EventInvitationInputFilter = typing.Annotated["EventInvitationInputFilter", strawberry.lazy(".EventInvitationGQLModel")]
+UserGQLModel = typing.Annotated["UserGQLModel", strawberry.lazy(".UserGQLModel")]
 
 @createInputs2
 class EventInputFilter:
@@ -203,6 +205,7 @@ Materializovaná cesta reprezentující umístění skupiny v hierarchii.""",
     )
     
     masterevent: typing.Optional["EventGQLModel"] = strawberry.field(
+        name="masterEvent",
         description="""Event which owns this particular event""",
         permission_classes=[
             OnlyForAuthentized
@@ -211,6 +214,7 @@ Materializovaná cesta reprezentující umístění skupiny v hierarchii.""",
     )
 
     subevents: typing.List["EventGQLModel"] = strawberry.field(
+        name="subEvents",
         description="""Event children""",
         permission_classes=[
             OnlyForAuthentized
@@ -226,6 +230,47 @@ Materializovaná cesta reprezentující umístění skupiny v hierarchii.""",
         resolver=VectorResolver["EventInvitationGQLModel"](fkey_field_name="event_id", whereType=EventInvitationInputFilter)
     )
 
+    @strawberry.field(
+        name="sensitiveMsg",
+        description="""Example of a field that exposes sensitive content only to authenticated users"""
+    )
+    async def sensitive_msg(self, info: strawberry.types.Info) -> typing.Optional[str]:
+        try:
+            user = getUserFromInfo(info)
+        except (AssertionError, AttributeError, KeyError, TypeError):
+            user = None
+        if isinstance(user, dict):
+            has_identity = user.get("id") is not None
+        else:
+            has_identity = bool(user)
+        return "sensitive information" if has_identity else None
+
+    @strawberry.field(
+        description="""Users participating in or invited to the event""",
+        permission_classes=[OnlyForAuthentized]
+    )
+    async def users(self, info: strawberry.types.Info) -> typing.List["UserGQLModel"]:
+        loaders = getLoadersFromInfo(info)
+        invitation_loader = loaders.EventInvitationModel
+        invitations_iter = await invitation_loader.filter_by(event_id=self.id)
+        invitations = list(invitations_iter)
+        user_ids = []
+        for invitation in invitations:
+            user_id = getattr(invitation, "user_id", None)
+            if user_id is None:
+                continue
+            user_ids.append(user_id)
+        # Preserve order while removing duplicates
+        seen = set()
+        unique_ids = []
+        for value in user_ids:
+            if value in seen:
+                continue
+            seen.add(value)
+            unique_ids.append(value)
+        from .UserGQLModel import UserGQLModel as _UserGQLModel
+        return [_UserGQLModel(id=user_id) for user_id in unique_ids]
+
 
 
 @strawberry.interface(
@@ -234,13 +279,11 @@ Materializovaná cesta reprezentující umístění skupiny v hierarchii.""",
 class EventQuery:
     event_by_id: typing.Optional[EventGQLModel] = strawberry.field(
         description="""get a event by its id""",
-        permission_classes=[OnlyForAuthentized],
         resolver=EventGQLModel.load_with_loader
     )
 
     event_page: typing.List[EventGQLModel] = strawberry.field(
         description="""get a page of events""",
-        permission_classes=[OnlyForAuthentized],
         resolver=PageResolver[EventGQLModel](whereType=EventInputFilter)
     )
 
@@ -250,9 +293,9 @@ from uoishelpers.resolvers import TreeInputStructureMixin, InputModelMixin
 )
 class EventInsertGQLModel(TreeInputStructureMixin):
     getLoader = EventGQLModel.getLoader
-    masterevent_id: IDType = strawberry.field(
+    masterevent_id: typing.Optional[IDType] = strawberry.field(
         description="""Event parent id""",
-        # default=None
+        default=None
     )
     name: typing.Optional[str] = strawberry.field(
         description="""Event name assigned by an administrator""",

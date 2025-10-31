@@ -10337,6 +10337,175 @@
             "user_id": "ccb397ad-0de7-46e7-bff0-42452f11dd5e",
             "state_id": null
         }
-    ]
+    ],
+    "purchases_evolution": [
+        {
+            "id": "a12f5d73-b2f3-4d0a-9151-1a7db7485b33",
+            "created": "2025-03-12T14:32:06.894407",
+            "lastchange": "2025-03-12T14:32:06.894407",
+            "reason": "Nakup kancelarskeho vybaveni",
+            "description": "Objednavka novych monitoru a klavesnic.",
+            "correct_examples": null,
+            "other_info_website": null,
+            "handover_request": "2025-03-13T09:00:00",
+            "reasoning": "Zastarale vybaveni zamestnancu",
+            "maininfo_id": null,
+            "createdby_id": "9b46b61e-38d4-4895-80dc-e785ca242149",
+            "updatedby_id": "9b46b61e-38d4-4895-80dc-e785ca242149"
+        },
+        {
+            "id": "c8e30a44-d843-437a-bf6e-06cb3a7ad345",
+            "created": "2025-04-02T10:11:06.894407",
+            "lastchange": "2025-04-02T10:11:06.894407",
+            "reason": "Obnova zasob kancelarskych potreb",
+            "description": "Papir, tonery a kancelarske doplnky",
+            "correct_examples": null,
+            "other_info_website": null,
+            "handover_request": "2025-04-05T08:30:00",
+            "reasoning": "Pravidelna ctvrletni objednavka",
+            "maininfo_id": null,
+            "createdby_id": "21eb67f5-2c42-4dd5-ac3d-3baffcb788ed",
+            "updatedby_id": "21eb67f5-2c42-4dd5-ac3d-3baffcb788ed"
+        },
+        {
+            "id": "f7c2d7ba-1b0e-4a0a-b6f4-07b7f5e43c50",
+            "created": "2025-05-18T09:15:00",
+            "lastchange": "2025-05-18T09:15:00",
+            "reason": "Nakup serverove techniky",
+            "description": "Doplnkove servery pro laborator B",
+            "correct_examples": null,
+            "other_info_website": "https://intranet.example/it-hw-plan",
+            "handover_request": "2025-05-30T08:00:00",
+            "reasoning": "Rozsireni virtualizacniho clusteru",
+            "status": "submitted",
+            "requested_delivery": "2025-05-30T08:00:00",
+            "submitted_at": "2025-05-18T09:15:00",
+            "maininfo_id": null,
+            "requester_id": "2d9dc5ca-a4a2-11ed-b9df-0242ac120003",
+            "approver_id": "45b2df80-ae0f-11ed-9bd8-0242ac110002",
+            "createdby_id": "2d9dc5ca-a4a2-11ed-b9df-0242ac120003",
+            "updatedby_id": "2d9dc5ca-a4a2-11ed-b9df-0242ac120003"
+        },
+        {
+            "id": "b5a26d6e-2e7f-4c54-8da6-8c5cb582f76d",
+            "created": "2025-05-20T14:40:00",
+            "lastchange": "2025-05-20T14:40:00",
+            "reason": "Objednani sluzby cisteni budovy",
+            "description": "Extra servis pro slavnostni otevreni nove haly",
+            "correct_examples": null,
+            "other_info_website": "https://intranet.example/facility-support",
+            "handover_request": "2025-05-28T06:00:00",
+            "reasoning": "Zabezpeceni prezentacni akce",
+            "status": "submitted",
+            "requested_delivery": "2025-05-28T06:00:00",
+            "submitted_at": "2025-05-20T14:40:00",
+            "maininfo_id": null,
+            "requester_id": "9b46b61e-38d4-4895-80dc-e785ca242149",
+            "approver_id": "21eb67f5-2c42-4dd5-ac3d-3baffcb788ed",
+            "createdby_id": "9b46b61e-38d4-4895-80dc-e785ca242149",
+            "updatedby_id": "9b46b61e-38d4-4895-80dc-e785ca242149"
+        }
+    ],
 
+    "purchase_items_evolution": [
+        {
+            "id": "a7e21a91-fb26-4a3d-bb55-0f8e2216f271",
+            "purchase_id": "a12f5d73-b2f3-4d0a-9151-1a7db7485b33",
+            "name": "Klimatizace",
+            "quantity": 3,
+            "price": 32650.0,
+            "created": "2025-03-12T14:32:06.894407",
+            "lastchange": "2025-03-12T14:32:06.894407",
+            "createdby_id": "9b46b61e-38d4-4895-80dc-e785ca242149",
+            "updatedby_id": "9b46b61e-38d4-4895-80dc-e785ca242149"
+        },
+        {
+            "id": "b911a29a-51a5-4f90-b9d2-8f71ed67a81a",
+            "purchase_id": "a12f5d73-b2f3-4d0a-9151-1a7db7485b33",
+            "name": "Kavovary",
+            "quantity": 5,
+            "price": 8600.0,
+            "created": "2025-03-12T14:32:06.894407",
+            "lastchange": "2025-03-12T14:32:06.894407",
+            "createdby_id": "9b46b61e-38d4-4895-80dc-e785ca242149",
+            "updatedby_id": "9b46b61e-38d4-4895-80dc-e785ca242149"
+        },
+        {
+            "id": "dc00fb4a-52b8-4f0e-bb70-50572f2d9a1b",
+            "purchase_id": "c8e30a44-d843-437a-bf6e-06cb3a7ad345",
+            "name": "Tiskárna",
+            "quantity": 2,
+            "price": 8590.0,
+            "created": "2025-04-02T10:11:06.894407",
+            "lastchange": "2025-04-02T10:11:06.894407",
+            "createdby_id": "21eb67f5-2c42-4dd5-ac3d-3baffcb788ed",
+            "updatedby_id": "21eb67f5-2c42-4dd5-ac3d-3baffcb788ed"
+        },
+        {
+            "id": "d65b7d4b-2f38-49cc-98ef-6a3b13b9a56a",
+            "purchase_id": "c8e30a44-d843-437a-bf6e-06cb3a7ad345",
+            "name": "Ultrazvukova cisticka laboratori",
+            "quantity": 1,
+            "price": 5600.0,
+            "created": "2025-04-02T10:11:06.894407",
+            "lastchange": "2025-04-02T10:11:06.894407",
+            "createdby_id": "21eb67f5-2c42-4dd5-ac3d-3baffcb788ed",
+            "updatedby_id": "21eb67f5-2c42-4dd5-ac3d-3baffcb788ed"
+        },
+        {
+            "id": "f4e1c3a9-5b5f-4e0b-9cfb-1d7b3cfac201",
+            "purchase_id": "f7c2d7ba-1b0e-4a0a-b6f4-07b7f5e43c50",
+            "name": "Serverovy rack 42U",
+            "quantity": 2,
+            "price": 14800.0,
+            "created": "2025-05-18T09:15:00",
+            "lastchange": "2025-05-18T09:15:00",
+            "createdby_id": "2d9dc5ca-a4a2-11ed-b9df-0242ac120003",
+            "updatedby_id": "2d9dc5ca-a4a2-11ed-b9df-0242ac120003"
+        },
+        {
+            "id": "7c4049a8-fc2c-4a46-b8fa-8b2b35499587",
+            "purchase_id": "f7c2d7ba-1b0e-4a0a-b6f4-07b7f5e43c50",
+            "name": "Rozsireni diskoveho pole",
+            "quantity": 1,
+            "price": 27600.0,
+            "created": "2025-05-18T09:15:00",
+            "lastchange": "2025-05-18T09:15:00",
+            "createdby_id": "2d9dc5ca-a4a2-11ed-b9df-0242ac120003",
+            "updatedby_id": "2d9dc5ca-a4a2-11ed-b9df-0242ac120003"
+        },
+        {
+            "id": "5dbd828d-9483-435a-93e5-3fa5d96d5f88",
+            "purchase_id": "f7c2d7ba-1b0e-4a0a-b6f4-07b7f5e43c50",
+            "name": "Prodlouzeni servisni licence",
+            "quantity": 3,
+            "price": 3600.0,
+            "created": "2025-05-18T09:15:00",
+            "lastchange": "2025-05-18T09:15:00",
+            "createdby_id": "2d9dc5ca-a4a2-11ed-b9df-0242ac120003",
+            "updatedby_id": "2d9dc5ca-a4a2-11ed-b9df-0242ac120003"
+        },
+        {
+            "id": "9f0f2fd3-189b-46f5-a5a9-11d9dc4e15c6",
+            "purchase_id": "b5a26d6e-2e7f-4c54-8da6-8c5cb582f76d",
+            "name": "Hodiny uklidoveho tymu",
+            "quantity": 12,
+            "price": 450.0,
+            "created": "2025-05-20T14:40:00",
+            "lastchange": "2025-05-20T14:40:00",
+            "createdby_id": "9b46b61e-38d4-4895-80dc-e785ca242149",
+            "updatedby_id": "9b46b61e-38d4-4895-80dc-e785ca242149"
+        },
+        {
+            "id": "2a4d6b9e-5ac4-4a55-9f5d-1c5ba87a7d8d",
+            "purchase_id": "b5a26d6e-2e7f-4c54-8da6-8c5cb582f76d",
+            "name": "Dezinfekcni prostredky",
+            "quantity": 15,
+            "price": 120.0,
+            "created": "2025-05-20T14:40:00",
+            "lastchange": "2025-05-20T14:40:00",
+            "createdby_id": "9b46b61e-38d4-4895-80dc-e785ca242149",
+            "updatedby_id": "9b46b61e-38d4-4895-80dc-e785ca242149"
+        }
+    ]
 }

@@ -22,7 +22,7 @@ from .BaseModel import BaseModel, UUIDColumn, UUIDFKey, IDType
 #
 ###########################################################################################################################
 class PurchaseModel(BaseModel):
-    __tablename__ = "purchases"
+    __tablename__ = "purchases_evolution"
     path_attribute_name = "path"
     parent_attribute_name = "maininfo"
     parent_id_attribute_name = "maininfo_id"
@@ -42,9 +42,33 @@ class PurchaseModel(BaseModel):
     other_info_website: Mapped[str] = mapped_column(default=None, nullable=True)
     handover_request: Mapped[datetime.datetime] = mapped_column(default=None, nullable=True)
     reasoning: Mapped[str] = mapped_column(default=None, nullable=True)
+    status: Mapped[str] = mapped_column(
+        default="draft",
+        nullable=False,
+        comment="Lifecycle state of the request (draft/submitted/approved/declined/fulfilled)",
+    )
+    requested_delivery: Mapped[datetime.datetime] = mapped_column(
+        default=None,
+        nullable=True,
+        comment="Preferred handover date for the requested asset or service",
+    )
+    submitted_at: Mapped[datetime.datetime] = mapped_column(
+        default=None,
+        nullable=True,
+        comment="Timestamp when the request was formally submitted",
+    )
+
+    requester_id: Mapped[IDType] = UUIDFKey(
+        ForeignKey("users.id"),
+        comment="User who created the request",
+    )
+    approver_id: Mapped[IDType] = UUIDFKey(
+        ForeignKey("users.id"),
+        comment="User responsible for approving the request",
+    )
 
     maininfo_id: Mapped[IDType] = mapped_column(
-        ForeignKey("purchases.id"),
+        ForeignKey("purchases_evolution.id"),
         nullable=True,
         default=None,
         index=True,
@@ -59,13 +83,24 @@ class PurchaseModel(BaseModel):
         cascade="all, delete-orphan",
     )
 
+    @hybrid_property
+    def is_submitted(self) -> bool:
+        return self.submitted_at is not None
+
+    @hybrid_property
+    def total_cost(self) -> float:
+        return sum(
+            (item.price or 0.0) * (item.quantity or 0.0)
+            for item in (self.subinfo or [])
+        )
+
 
 
 class PurchaseItem(BaseModel):
-    __tablename__ = "purchase_items"
+    __tablename__ = "purchase_items_evolution"
 
     # allow default None to satisfy dataclass field ordering when BaseModel defines defaulted fields
-    purchase_id: Mapped[IDType] = mapped_column(ForeignKey("purchases.id"), index=True, nullable=True, default=None)
+    purchase_id: Mapped[IDType] = mapped_column(ForeignKey("purchases_evolution.id"), index=True, nullable=True, default=None)
 
     name: Mapped[str] = mapped_column(default=None, nullable=True)
     quantity: Mapped[float] = mapped_column(default=1.0, nullable=False)
@@ -77,4 +112,5 @@ class PurchaseItem(BaseModel):
         uselist=False,
         viewonly=False
     )
+    
     

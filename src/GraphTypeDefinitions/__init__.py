@@ -31,9 +31,20 @@ schema = strawberry.federation.Schema(
 )
 
 from uoishelpers.schema import WhoAmIExtension, ProfilingExtension, PrometheusExtension
+from uoishelpers.schema.WhoAmIExtension import (
+    mequery as _whoami_mequery,
+    apolloQuery as _whoami_apollo_query,
+    graphiQLQuery as _whoami_graphiql_query,
+    sdlQuery as _whoami_sdl_query,
+)
 
 
 class ResilientWhoAmIExtension(WhoAmIExtension):
+    mequery = _whoami_mequery
+    apolloQuery = _whoami_apollo_query
+    graphiQLQuery = _whoami_graphiql_query
+    sdlQuery = _whoami_sdl_query
+
     async def on_execute(self):
         query = self.execution_context.query
         print(f"Executing {query}")

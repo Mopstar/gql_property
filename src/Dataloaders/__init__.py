@@ -12,7 +12,9 @@ from src.DBDefinitions.purchasemodel import PurchaseModel, PurchaseItem
 
 from uoishelpers.dataloaders.LoaderMapBase import LoaderMapBase
 from uoishelpers.dataloaders.IDLoader import IDLoader
+from uoishelpers.schema.ProfilingExtension import Counter
 import src.DBDefinitions
+
 
 class LoaderMap(LoaderMapBase[BaseModel]):
     """LoaderMap is a map of IDLoaders for all models in the BaseModel registry.
@@ -25,7 +27,6 @@ class LoaderMap(LoaderMapBase[BaseModel]):
     PurchaseModel: IDLoader[src.DBDefinitions.purchasemodel.PurchaseModel] = None
     PurchaseItem: IDLoader[src.DBDefinitions.purchasemodel.PurchaseItem] = None
 
-
     def __init__(self, session):
         super().__init__(session)
 
@@ -36,7 +37,17 @@ class LoaderMap(LoaderMapBase[BaseModel]):
 
         # print(f"LoaderMap created with session: {session}")
 
-def createLoadersContext(session):
-    return {
-        "loaders": LoaderMap(session)
+
+def createLoadersContext(session_like):
+    session = session_like
+    created_session = False
+    if not hasattr(session, "identity_map") and callable(session_like):
+        session = session_like()
+        created_session = True
+    context = {
+        "loaders": LoaderMap(session),
+        "ProfilingExtension.counter": Counter(),
     }
+    if created_session:
+        context.setdefault("session", session)
+    return context
