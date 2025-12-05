@@ -8,7 +8,7 @@ from uoishelpers.resolvers import (
     getLoadersFromInfo,
     PageResolver,
     VectorResolver,
-    ScalarResolver,
+    ScalarResolver,  
     InputModelMixin,
 )
 
@@ -24,7 +24,7 @@ class PurchaseGQLModel(BaseGQLModel):
     def getLoader(cls, info: strawberry.types.Info):
         return getLoadersFromInfo(info).PurchaseModel
 
-    path: typing.Optional[str] = strawberry.field(default=None)
+    path: typing.Optional[str] = strawberry.field(default=None) 
     reason: typing.Optional[str] = strawberry.field(default=None)
     description: typing.Optional[str] = strawberry.field(default=None)
     correct_examples: typing.Optional[str] = strawberry.field(default=None)

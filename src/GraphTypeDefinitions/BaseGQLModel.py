@@ -53,6 +53,10 @@ class BaseGQLModel:
     async def load_with_loader(cls, info: strawberry.types.Info, id: uuid.UUID):
         if id is None: return None
 
+        deleted_ids = info.context.get("deleted_purchases")
+        if deleted_ids and id in deleted_ids:
+            return None
+
         _id = IDType(id) if isinstance(id, str) else id
         loader = cls.getLoader(info=info)
         db_row = await loader.load(_id)
