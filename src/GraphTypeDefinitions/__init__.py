@@ -12,69 +12,27 @@ timedelta = strawberry.scalar(
     parse_value=lambda v: datetime.timedelta(minutes=v),
 )
 
-
 from .BaseGQLModel import Relation
 from .BaseGQLModel import BaseGQLModel
 from .UserGQLModel import UserGQLModel
-from .PurchaseGQLModel import PurchaseGQLModel
-from .PurchaseItemGQLModel import PurchaseItemGQLModel
 
 schema = strawberry.federation.Schema(
     query=Query,
     mutation=Mutation,
-    types=(UserGQLModel, BaseGQLModel, PurchaseGQLModel, PurchaseItemGQLModel), 
+    types=(UserGQLModel, BaseGQLModel),
     scalar_overrides={datetime.timedelta: timedelta._scalar_definition},
 
     extensions=[],
     schema_directives=[Relation]
-    
+
 )
 
 from uoishelpers.schema import WhoAmIExtension, ProfilingExtension, PrometheusExtension
-from uoishelpers.schema.WhoAmIExtension import (
-    mequery as _whoami_mequery,
-    apolloQuery as _whoami_apollo_query,
-    graphiQLQuery as _whoami_graphiql_query,
-    sdlQuery as _whoami_sdl_query,
-)
 
-
-class ResilientWhoAmIExtension(WhoAmIExtension):
-    mequery = _whoami_mequery
-    apolloQuery = _whoami_apollo_query
-    graphiQLQuery = _whoami_graphiql_query
-    sdlQuery = _whoami_sdl_query
-
-    async def on_execute(self):
-        query = self.execution_context.query
-        print(f"Executing {query}")
-        existing_user = self.execution_context.context.get("user", None)
-        should_query_remote = (
-            existing_user is None
-            and query not in [self.apolloQuery, self.graphiQLQuery, self.sdlQuery]
-        )
-
-        resolved_user = existing_user
-        if should_query_remote:
-            try:
-                whoami_response = await self.ug_query(query=self.mequery)
-                resolved_user = whoami_response["data"]["me"]
-            except Exception:
-                print("error with ug endpoint")
-                resolved_user = existing_user
-
-        if not resolved_user:
-            resolved_user = existing_user or {}
-
-        self.execution_context.context["user"] = resolved_user
-        self.execution_context.context.setdefault("ug_client", self.ug_query)
-        yield
-
-
-schema.extensions.append(ResilientWhoAmIExtension)
+schema.extensions.append(WhoAmIExtension)
 schema.extensions.append(ProfilingExtension)
 schema.extensions.append(PrometheusExtension(prefix="GQL_Evolution"))
 
 from uoishelpers.gqlpermissions.RolePermissionSchemaExtension import RolePermissionSchemaExtension
-schema.extensions.append(RolePermissionSchemaExtension)
 
+schema.extensions.append(RolePermissionSchemaExtension)
