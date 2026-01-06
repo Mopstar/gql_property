@@ -1,7 +1,45 @@
 # GraphQL Authorization Test Queries
 
-**Endpoint:** `http://localhost:8000/gql`  
-**Playground:** `http://localhost:8000/ui`
+## Endpoints
+
+**Direct Service (Development):**
+- Endpoint: `http://localhost:8000/gql`
+- Playground: `http://localhost:8000/ui`
+- Use for: Testing purchase mutations, full schema access
+
+**Federation Gateway (Production-like):**
+- Endpoint: `http://localhost:33000/api/gql`
+- Playground: Not available (use direct services)
+- Use for: Testing cross-service queries after federation setup
+
+### Federation Setup Required
+
+To test through federation gateway:
+
+1. **Ensure your service is running locally:**
+   ```powershell
+   uvicorn main:app --host 0.0.0.0 --port 8000 --env-file environment.txt
+   ```
+
+2. **Restart Docker Compose (to pick up config changes):**
+   ```powershell
+   docker compose -f docker-compose.debug.yml down
+   docker compose -f docker-compose.debug.yml up -d
+   ```
+
+3. **Verify federation sees your service:**
+   ```graphql
+   # Query at http://localhost:33000/api/gql
+   query {
+     _service {
+       sdl
+     }
+   }
+   ```
+
+4. **Then test purchases through gateway:**
+   - Endpoint: `http://localhost:33000/api/gql`
+   - All queries below will work through federation
 
 ---
 
