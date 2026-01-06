@@ -570,5 +570,5 @@ def create_child_update_permissions(
         OwnershipPermissionExtension(roles=required_roles),
         UserRoleProviderExtension(),
         ParentGroupProviderExtension(parent_field=parent_field, parent_loader=parent_loader),
-        LoadDataExtension(db_model=model_type),
+        LoadDataExtension(),
     ]
