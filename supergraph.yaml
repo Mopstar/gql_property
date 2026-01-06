@@ -1,6 +1,0 @@
-federation_version: 2
-subgraphs:
-  purchases:
-    routing_url: http://localhost:8080/graphql   # endpoint, kde běží subgraph
-    schema:
-      file: ./purchases.graphql                  
