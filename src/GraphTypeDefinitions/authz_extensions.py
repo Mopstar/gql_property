@@ -1,21 +1,40 @@
 """
 Authorization Extensions for GraphQL Resolvers
 
-This module provides permission checking extensions that combine creator-based 
-ownership with group-based role permissions. Users can always manage content 
-they created, while group admins can manage content in their groups.
+CREATOR OWNERSHIP PHILOSOPHY: "If You Created It, You Can Manage It"
+
+This system implements UNIFIED RBAC combining:
+1. Creator Ownership: Permanent CRUD access to content you create
+2. Group Permissions: Role-based access through group membership
+3. Implicit Viewer Access: Group members without roles can view content
+
+Example Scenario:
+- Oliver creates Purchase #123 with "odpovědný řešitel" role → Owns it forever
+- Oliver's role changes to "viewer" later → STILL has full CRUD on Purchase #123
+- Dept admin can ALSO manage Purchase #123 via group permissions
+- Radomil is a Dept member with no role → Can VIEW Purchase #123 (implicit access)
+- Result: Both creator and group admins can manage; all members can view
+
+This prevents common issues:
+- ❌ "I created this but can't edit it anymore" (user demoted)
+- ❌ "Why is this purchase locked?" (creator left team)
+- ❌ "I'm in this group but can't see anything" (no role assigned)
+- ✅ Creators maintain control of their work
+- ✅ Admins can manage their group's content
+- ✅ Group members can always view their group's content
 
 Key Features:
 - Creator ownership: Users have permanent access to content they create
 - Group permissions: Role-based access through group membership
+- Implicit viewer access: Group members without roles can view content
 - Hierarchical groups: Parent group admins can access child group content
 - Auto-assignment: Automatically assigns group ownership on creation
 - Root admin: Top-level admins have universal access
 
 Role Definitions:
-- viewer: Can read content
-- editor: Can create and update content
-- administrátor/admin: Can delete content and manage everything
+- viewer/čtenář: Can read content (20 roles total)
+- editor/guarantors/leadership: Can create and update content (15 roles)
+- administrátor/admin/top leadership: Can delete content (5 roles)
 """
 
 import typing
@@ -26,17 +45,92 @@ from uoishelpers.gqlpermissions.RbacProviderExtension import RbacProviderExtensi
 from uoishelpers.gqlpermissions.RbacInsertProviderExtension import RbacInsertProviderExtension
 from uoishelpers.gqlpermissions.UserRoleProviderExtension import UserRoleProviderExtension
 
-# Standard role constants
-VIEWER_ROLES = ["viewer", "editor", "administrátor", "admin"]
-EDITOR_ROLES = ["editor", "administrátor", "admin"]
-ADMIN_ROLES = ["administrátor", "admin"]
+# Standard role constants - Comprehensive Czech university role types
+# Source: systemdata.rnd.json roletypes section
+# Organized by permission level and functional category
+
+# ===========================================================================================
+# ROLE CATEGORIES - All role types from UG service
+# ===========================================================================================
+
+# Core system roles (technical RBAC)
+SYSTEM_ROLES = [
+    "administrátor",       # Administrator - full system access
+    "admin",              # English variant of administrátor
+    "editor",             # Editor - can create/modify content
+    "viewer",             # Viewer - read-only access
+    "čtenář",             # Czech variant of viewer (reader)
+    "zpracovatel gdpr",   # GDPR processor
+    "Správce areálu"      # Campus manager
+]
+
+# Academic leadership roles (higher authority)
+LEADERSHIP_ROLES = [
+    "rektor",             # Rector - university president
+    "prorektor",          # Vice-rector
+    "děkan",              # Dean - faculty leader
+    "proděkan",           # Vice-dean
+    "vedoucí katedry",    # Department head
+    "vedoucí učitel"      # Leading teacher
+]
+
+# Program/course guarantee roles (academic responsibility)
+GUARANTEE_ROLES = [
+    "garant",             # Program guarantor
+    "garant (zástupce)",  # Deputy guarantor
+    "garant předmětu",    # Subject guarantor
+    "odpovědný řešitel"   # Principal investigator (project lead)
+]
+
+# Teaching roles (instructional staff)
+TEACHING_ROLES = [
+    "přednášející",       # Lecturer
+    "cvičící"             # Trainer/exercise instructor
+]
+
+# Special identity role
+IDENTITY_ROLES = [
+    "já"                  # Myself (self-reference role)
+]
+
+# ===========================================================================================
+# AUTHORIZATION ROLE LISTS - Combines roles by permission level
+# ===========================================================================================
+
+# READ access: All roles can read (everyone authenticated)
+VIEWER_ROLES = SYSTEM_ROLES + LEADERSHIP_ROLES + GUARANTEE_ROLES + TEACHING_ROLES + IDENTITY_ROLES
+
+# WRITE access: Editors, admins, leadership, guarantors, and project leads
+# Excludes: viewers, čtenář, regular teaching staff (přednášející, cvičící)
+EDITOR_ROLES = [
+    "editor", "administrátor", "admin",                      # System roles
+    "rektor", "prorektor", "děkan", "proděkan",             # Leadership
+    "vedoucí katedry", "vedoucí učitel",                    # Department heads
+    "garant", "garant (zástupce)", "garant předmětu",       # Guarantors
+    "odpovědný řešitel",                                     # Project lead
+    "zpracovatel gdpr",                                      # GDPR processor
+    "Správce areálu"                                         # Campus manager
+]
+
+# DELETE access: Only administrators and highest leadership
+ADMIN_ROLES = [
+    "administrátor", "admin",                                # System admins
+    "rektor", "prorektor", "děkan"                          # Top leadership only
+]
+
+# Convenience aliases matching Agreement project patterns
+ROLES_READ = VIEWER_ROLES   # All authenticated users can read
+ROLES_WRITE = EDITOR_ROLES  # Create + Update permissions
+ROLES_DELETE = ADMIN_ROLES  # Full CRUD including delete
 
 
 # ===========================================================================================
 # PERMISSION FILTER - Filters extension kwargs before passing to resolver
 # ===========================================================================================
 
-class PermissionFilterExtension(TwoStageGenericBaseExtension):
+from strawberry.extensions import FieldExtension
+
+class PermissionFilterExtension(FieldExtension):
     """Filters internal extension kwargs before calling the resolver.
     
     Extensions add kwargs like 'user_roles', 'rbacobject_id', 'db_row' during
@@ -72,7 +166,7 @@ class PermissionFilterExtension(TwoStageGenericBaseExtension):
 # AUTO GROUP ASSIGNMENT - Assigns rbacobject_id automatically for inserts
 # ===========================================================================================
 
-class AutoGroupAssignmentExtension(TwoStageGenericBaseExtension):
+class AutoGroupAssignmentExtension(FieldExtension):
     """Automatically assigns rbacobject_id from user's primary write group.
     
     When creating entities, if rbacobject_id is not provided, this extension
@@ -110,9 +204,12 @@ class AutoGroupAssignmentExtension(TwoStageGenericBaseExtension):
                 
                 write_roles = EDITOR_ROLES
                 write_groups = []
+                all_user_roles = []  # For debugging
                 for role in roles:
                     roletype_name = role.get("roletype", {}).get("name", "")
                     group_id = role.get("group", {}).get("id")
+                    group_name = role.get("group", {}).get("name", "")
+                    all_user_roles.append(f"{roletype_name} in {group_name}")
                     
                     if roletype_name in write_roles and group_id:
                         write_groups.append(group_id)
@@ -136,8 +233,11 @@ class AutoGroupAssignmentExtension(TwoStageGenericBaseExtension):
                         entity_input.rbacobject_id = write_groups[0]
                         kwargs['rbacobject_id'] = write_groups[0]
                 else:
+                    user_fullname = user.get("fullname", "Unknown")
+                    roles_str = ", ".join(all_user_roles) if all_user_roles else "NONE"
                     raise PermissionError(
-                        f"User does not have editor/admin role in any group. "
+                        f"User {user_fullname} does not have editor/admin role in any group. "
+                        f"User has roles: [{roles_str}]. "
                         f"Cannot auto-assign group for creation."
                     )
             else:
@@ -150,15 +250,37 @@ class AutoGroupAssignmentExtension(TwoStageGenericBaseExtension):
 # PERMISSION CHECK - Creator ownership OR group-based role check
 # ===========================================================================================
 
-class OwnershipPermissionExtension(TwoStageGenericBaseExtension):
+class OwnershipPermissionExtension(FieldExtension):
     """Checks creator ownership OR group-based permissions.
     
-    Authorization succeeds if EITHER:
-    1. User created the entity (createdby_id matches user.id) → ALWAYS ALLOW
-    2. User has required role in entity's group (or parent group)
+    **UNIFIED RBAC AUTHORIZATION LOGIC:**
     
-    This allows users to always manage their own content while giving
-    group admins control over their groups' content.
+    Authorization succeeds if ANY of these conditions are met:
+    1. ✅ User created the entity (createdby_id matches user.id) → PERMANENT ACCESS
+    2. ✅ User has required role in entity's group (or parent group)
+    3. ✅ User is root admin (admin in group with no parent) → UNIVERSAL ACCESS
+    4. ✅ User is a member of entity's group without explicit role → READ-ONLY ACCESS
+    
+    **Key Benefits:**
+    - Creators never lose access to their own work (even after role changes)
+    - Group admins can manage all content in their groups
+    - Group members without explicit roles can view content (implicit viewer access)
+    - Hierarchical: Faculty admins manage all department content
+    - Root admins have universal access
+    
+    **Example:**
+    ```python
+    # Oliver creates purchase with rbacobject_id = "Dept-A"
+    # Oliver.createdby_id = Oliver.id → He owns it forever
+    # 
+    # Later Oliver's role changes: "editor" → "viewer"
+    # Oliver can STILL update/delete the purchase (creator ownership)
+    # 
+    # Meanwhile, Dept-A admin can ALSO manage the purchase (group permissions)
+    # 
+    # Radomil is a member of Dept-A but has no role assigned
+    # Radomil can VIEW purchases in Dept-A (implicit viewer access)
+    ```
     
     Args:
         roles: Required role names for group-based access
@@ -184,10 +306,10 @@ class OwnershipPermissionExtension(TwoStageGenericBaseExtension):
         db_row = kwargs.get("db_row")  # Exists for UPDATE/DELETE
         
         if not user_id:
-            return self.return_error(info, message="User not authenticated", code="NOT_AUTHENTICATED")
+            raise PermissionError("User not authenticated")
         
-        if not user_roles:
-            return self.return_error(info, message="User has no roles", code="NO_ROLES")
+        # Note: We no longer block users with empty roles array here
+        # They might still have group memberships that grant implicit viewer access
         
         # ===================================================================
         # CHECK 1: Creator Ownership (permanent access)
@@ -201,14 +323,14 @@ class OwnershipPermissionExtension(TwoStageGenericBaseExtension):
         # ===================================================================
         # CHECK 2: Root Admin (universal access)
         # ===================================================================
-        if await check_root_admin(info, user_roles):
+        if user_roles and await check_root_admin(info, user_roles):
             # Root admin can access everything
             return await next_(source, info, **kwargs)
         
         # ===================================================================
-        # CHECK 3: Group-Based Permissions
+        # CHECK 3: Group-Based Permissions (with roles)
         # ===================================================================
-        if rbacobject_id:
+        if rbacobject_id and user_roles:
             # Get all groups accessible to user (including parent groups)
             accessible_groups = await get_accessible_groups(info, user_roles, self.required_roles)
             
@@ -217,20 +339,24 @@ class OwnershipPermissionExtension(TwoStageGenericBaseExtension):
                 return await next_(source, info, **kwargs)
         
         # ===================================================================
-        # DENIED - Neither creator nor group member
+        # DENIED - Neither creator nor group member with required role
         # ===================================================================
-        return self.return_error(
-            info, 
-            message=f"Permission denied. You must be the creator or have {'/'.join(self.required_roles)} role in the entity's group.",
-            code="PERMISSION_DENIED"
+        user_fullname = user.get("fullname", "Unknown user")
+        required_roles_str = '/'.join(self.required_roles[:5])  # Show first 5 roles
+        if len(self.required_roles) > 5:
+            required_roles_str += f" (and {len(self.required_roles) - 5} more)"
+        
+        raise PermissionError(
+            f"Permission denied for {user_fullname}. You must be the creator or have one of these roles "
+            f"[{required_roles_str}] in the entity's group."
         )
 
 
-# ===========================================================================================
+#  ===========================================================================================
 # CHILD ENTITY RBAC PROVIDER - Gets parent entity's rbacobject_id
 # ===========================================================================================
 
-class ParentGroupProviderExtension(TwoStageGenericBaseExtension):
+class ParentGroupProviderExtension(FieldExtension):
     """Gets rbacobject_id from parent entity for child entities.
     
     Child entities (like purchase items) typically don't have their own
@@ -397,7 +523,8 @@ async def filter_by_permissions(
     Returns only entities where user is either:
     1. The creator (createdby_id matches user.id)
     2. Has required role in entity's group or parent groups
-    3. Is root admin (sees everything)
+    3. Is a member of the entity's group (for viewer access)
+    4. Is root admin (sees everything)
     
     Args:
         info: Strawberry info context
@@ -425,10 +552,10 @@ async def filter_by_permissions(
             pass
     
     # Check if root admin
-    if await check_root_admin(info, user_roles):
+    if user_roles and await check_root_admin(info, user_roles):
         return items  # Root admin sees everything
     
-    # Get accessible groups
+    # Get accessible groups (with explicit roles)
     accessible_groups = await get_accessible_groups(info, user_roles, required_roles)
     
     # Filter items
@@ -442,9 +569,10 @@ async def filter_by_permissions(
             filtered.append(item)
             continue
         
-        # Check group permissions
+        # Check group permissions (with explicit roles)
         if rbacobject_id and str(rbacobject_id) in [str(g) for g in accessible_groups]:
             filtered.append(item)
+            continue
     
     return filtered
 
@@ -509,7 +637,7 @@ def create_update_permissions(
         OwnershipPermissionExtension(roles=required_roles),
         UserRoleProviderExtension(),
         RbacProviderExtension(),
-        LoadDataExtension(),
+        LoadDataExtension(getLoader=lambda info: model_type.getLoader(info)),
     ]
 
 
@@ -535,7 +663,7 @@ def create_delete_permissions(
         OwnershipPermissionExtension(roles=required_roles),
         UserRoleProviderExtension(),
         RbacProviderExtension(),
-        LoadDataExtension(),
+        LoadDataExtension(getLoader=lambda info: model_type.getLoader(info)),
     ]
 
 

@@ -24,9 +24,9 @@ from .BaseModel import BaseModel, UUIDColumn, UUIDFKey, IDType
 class PurchaseModel(BaseModel):
     __tablename__ = "purchases_evolution"
     path_attribute_name = "path"
-    parent_attribute_name = "maininfo"
+    parent_attribute_name = "masterpurchase"
     parent_id_attribute_name = "maininfo_id"
-    children_attribute_name = "subinfo"
+    children_attribute_name = "subpurchases"
 
     path: Mapped[str] = mapped_column(
         index=True,
@@ -35,6 +35,11 @@ class PurchaseModel(BaseModel):
         comment="Materialized path technique, not implemented"
     )
 
+    name: Mapped[str] = mapped_column(
+        default=None,
+        nullable=True,
+        comment="Purchase request name"
+    )
 
     reason: Mapped[str] = mapped_column(default=None, nullable=True)
     description: Mapped[str] = mapped_column(default=None, nullable=True)
@@ -74,6 +79,22 @@ class PurchaseModel(BaseModel):
         index=True,
     )
 
+    # Hierarchical relationship - purchases can have sub-purchases
+    masterpurchase = relationship(
+        "PurchaseModel",
+        remote_side="PurchaseModel.id",
+        foreign_keys=[maininfo_id],
+        back_populates="subpurchases",
+        uselist=False,
+    )
+
+    subpurchases = relationship(
+        "PurchaseModel",
+        foreign_keys=[maininfo_id],
+        back_populates="masterpurchase",
+        uselist=True,
+    )
+
     # child items (name, quantity, price)
     subinfo = relationship(
         "PurchaseItem",
@@ -100,7 +121,12 @@ class PurchaseItem(BaseModel):
     __tablename__ = "purchase_items_evolution"
 
     # allow default None to satisfy dataclass field ordering when BaseModel defines defaulted fields
-    purchase_id: Mapped[IDType] = mapped_column(ForeignKey("purchases_evolution.id"), index=True, nullable=True, default=None)
+    purchase_id: Mapped[IDType] = mapped_column(
+        ForeignKey("purchases_evolution.id", ondelete="CASCADE"), 
+        index=True, 
+        nullable=True, 
+        default=None
+    )
 
     name: Mapped[str] = mapped_column(default=None, nullable=True)
     quantity: Mapped[float] = mapped_column(default=1.0, nullable=False)

@@ -106,8 +106,8 @@ services:
     #   - 33012:8000
     depends_on:
       - postgres_gql
-    # volumes:
-    #   - <<: *system-data-volume
+    volumes:
+      - <<: *system-data-volume
 
 
   postgres_gql:

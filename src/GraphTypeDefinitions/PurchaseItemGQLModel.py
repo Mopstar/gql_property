@@ -60,11 +60,7 @@ class PurchaseItemGQLModel(BaseGQLModel):
     def getLoader(cls, info: strawberry.types.Info):
         return getLoadersFromInfo(info).PurchaseItemModel
 
-    @classmethod
-    def from_dataclass(cls, db_row):
-        payload = dataclasses.asdict(db_row)
-        payload.pop("purchase_id", None)
-        return cls(**payload)
+    # No need to override from_dataclass - keep purchase_id field
 
     name: typing.Optional[str] = strawberry.field(
         default=None,
@@ -182,8 +178,9 @@ class PurchaseItemInsertGQLModel(InputModelMixin):
         description="Unit of measurement",
         default=None
     )
-    purchase_id: IDType = strawberry.field(
-        description="Parent purchase request ID"
+    purchase_id: typing.Optional[IDType] = strawberry.field(
+        description="Parent purchase request ID",
+        default=None
     )
     id: typing.Optional[IDType] = strawberry.field(
         description="Purchase item id",

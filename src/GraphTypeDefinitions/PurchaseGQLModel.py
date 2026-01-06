@@ -45,6 +45,9 @@ from .BaseGQLModel import BaseGQLModel, IDType, Relation
 PurchaseItemGQLModel = typing.Annotated[
     "PurchaseItemGQLModel", strawberry.lazy(".PurchaseItemGQLModel")
 ]
+PurchaseItemInsertGQLModel = typing.Annotated[
+    "PurchaseItemInsertGQLModel", strawberry.lazy(".PurchaseItemGQLModel")
+]
 PurchaseItemInputFilter = typing.Annotated[
     "PurchaseItemInputFilter", strawberry.lazy(".PurchaseItemGQLModel")
 ]
@@ -252,11 +255,25 @@ class PurchaseGQLModel(BaseGQLModel):
 
 @strawberry.interface(description="Purchase queries")
 class PurchaseQuery:
-    purchase_by_id: typing.Optional[PurchaseGQLModel] = strawberry.field(
-        description="Get a purchase by its id",
-        resolver=PurchaseGQLModel.load_with_loader,
-        permission_classes=[OnlyForAuthentized],
+    @strawberry.field(
+        description="Get a purchase by its id (filtered by creator ownership or group permissions)",
+        permission_classes=[OnlyForAuthentized]
     )
+    async def purchase_by_id(
+        self,
+        info: strawberry.types.Info,
+        id: IDType
+    ) -> typing.Optional[PurchaseGQLModel]:
+        # Load the purchase
+        purchase = await PurchaseGQLModel.load_with_loader(info, id=id)
+        if purchase is None:
+            return None
+        
+        # Filter by permissions: creator ownership OR group role
+        filtered = await filter_by_permissions(
+            info, [purchase], required_roles=VIEWER_ROLES
+        )
+        return filtered[0] if filtered else None
 
     @strawberry.field(
         description="Get purchases (filtered by creator ownership or group permissions)",
@@ -311,6 +328,11 @@ class PurchaseInsertGQLModel(TreeInputStructureMixin):
         description="Sub-purchases",
         default_factory=list
     )
+    subinfo: typing.Optional[typing.List["PurchaseItemInsertGQLModel"]] = strawberry.field(
+        name="items",
+        description="Purchase items",
+        default_factory=list
+    )
 
     rbacobject_id: strawberry.Private[IDType] = None
     createdby_id: strawberry.Private[IDType] = None
@@ -318,6 +340,10 @@ class PurchaseInsertGQLModel(TreeInputStructureMixin):
 
 @strawberry.input(description="Update Purchase")
 class PurchaseUpdateGQLModel:
+    @classmethod
+    def getLoader(cls, info: strawberry.types.Info):
+        return getLoadersFromInfo(info).PurchaseModel
+
     id: IDType = strawberry.field(
         description="Purchase id"
     )
@@ -325,25 +351,29 @@ class PurchaseUpdateGQLModel:
         description="Timestamp"
     )
 
-    name: typing.Optional[str] = None
-    path: typing.Optional[str] = None
-    reason: typing.Optional[str] = None
-    description: typing.Optional[str] = None
-    correct_examples: typing.Optional[str] = None
-    other_info_website: typing.Optional[str] = None
-    handover_request: typing.Optional[datetime.datetime] = None
-    reasoning: typing.Optional[str] = None
-    status: typing.Optional[str] = None
-    requested_delivery: typing.Optional[datetime.datetime] = None
-    submitted_at: typing.Optional[datetime.datetime] = None
-    requester_id: typing.Optional[IDType] = None
-    approver_id: typing.Optional[IDType] = None
+    name: typing.Optional[str] = strawberry.UNSET
+    path: typing.Optional[str] = strawberry.UNSET
+    reason: typing.Optional[str] = strawberry.UNSET
+    description: typing.Optional[str] = strawberry.UNSET
+    correct_examples: typing.Optional[str] = strawberry.UNSET
+    other_info_website: typing.Optional[str] = strawberry.UNSET
+    handover_request: typing.Optional[datetime.datetime] = strawberry.UNSET
+    reasoning: typing.Optional[str] = strawberry.UNSET
+    status: typing.Optional[str] = strawberry.UNSET
+    requested_delivery: typing.Optional[datetime.datetime] = strawberry.UNSET
+    submitted_at: typing.Optional[datetime.datetime] = strawberry.UNSET
+    requester_id: typing.Optional[IDType] = strawberry.UNSET
+    approver_id: typing.Optional[IDType] = strawberry.UNSET
 
     changedby_id: strawberry.Private[IDType] = None
 
 
 @strawberry.input(description="Delete Purchase")
 class PurchaseDeleteGQLModel:
+    @classmethod
+    def getLoader(cls, info: strawberry.types.Info):
+        return getLoadersFromInfo(info).PurchaseModel
+
     id: IDType = strawberry.field(
         description="Purchase id"
     )

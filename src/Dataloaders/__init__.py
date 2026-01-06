@@ -26,6 +26,7 @@ class LoaderMap(LoaderMapBase[BaseModel]):
     EventInvitationModel: IDLoader[src.DBDefinitions.EventInvitationModel] = None
     PurchaseModel: IDLoader[src.DBDefinitions.purchasemodel.PurchaseModel] = None
     PurchaseItem: IDLoader[src.DBDefinitions.purchasemodel.PurchaseItem] = None
+    PurchaseItemModel: IDLoader[src.DBDefinitions.purchasemodel.PurchaseItem] = None  # Alias for PurchaseItem
 
     def __init__(self, session):
         super().__init__(session)
@@ -34,6 +35,7 @@ class LoaderMap(LoaderMapBase[BaseModel]):
         self.EventInvitationModel = self.get(EventInvitationModel)
         self.PurchaseModel = self.get(PurchaseModel)
         self.PurchaseItem = self.get(PurchaseItem)
+        self.PurchaseItemModel = self.PurchaseItem  # Alias for compatibility
 
         # print(f"LoaderMap created with session: {session}")
 

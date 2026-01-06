@@ -199,7 +199,7 @@ async def get_context(request: Request):
             me { 
                 id 
                 fullname 
-                email 
+                email
                 roles {
                     group {
                         id
@@ -215,10 +215,19 @@ async def get_context(request: Request):
         }''')
         me = None
         if isinstance(me_resp, dict):
-            me = me_resp.get('data', {}).get('me')
+            # Log full response for debugging
+            if 'errors' in me_resp:
+                logging.error(f"UG service errors: {me_resp['errors']}")
+            data = me_resp.get('data', {})
+            me = data.get('me')
         if me:
+            roles_count = len(me.get('roles', []))
             result.setdefault('user', me)
-            logging.info(f"User authenticated: {me.get('id')} - {me.get('fullname')}")
+            logging.info(f"User authenticated: {me.get('id')} - {me.get('fullname')} with {roles_count} roles")
+            if roles_count == 0:
+                logging.warning(f"User {me.get('fullname')} has NO roles assigned!")
+        else:
+            logging.warning(f"UG service returned no user data. Response: {me_resp}")
     except Exception as e:
         logging.debug(f"Failed to resolve user: {e}")
     
