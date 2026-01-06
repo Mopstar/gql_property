@@ -509,7 +509,7 @@ def create_update_permissions(
         OwnershipPermissionExtension(roles=required_roles),
         UserRoleProviderExtension(),
         RbacProviderExtension(),
-        LoadDataExtension(db_model=model_type),
+        LoadDataExtension(),
     ]
 
 
@@ -535,7 +535,7 @@ def create_delete_permissions(
         OwnershipPermissionExtension(roles=required_roles),
         UserRoleProviderExtension(),
         RbacProviderExtension(),
-        LoadDataExtension(db_model=model_type),
+        LoadDataExtension(),
     ]
 
 
