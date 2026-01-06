@@ -31,7 +31,7 @@ from uoishelpers.schema import WhoAmIExtension, ProfilingExtension, PrometheusEx
 
 schema.extensions.append(WhoAmIExtension)
 schema.extensions.append(ProfilingExtension)
-schema.extensions.append(PrometheusExtension(prefix="GQL_Evolution"))
+schema.extensions.append(PrometheusExtension(prefix="GQL_Property"))
 
 from uoishelpers.gqlpermissions.RolePermissionSchemaExtension import RolePermissionSchemaExtension
 

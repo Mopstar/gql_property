@@ -10,7 +10,16 @@ from uoishelpers.gqlpermissions import (
     SimpleInsertPermission, 
     SimpleUpdatePermission, 
     SimpleDeletePermission
-)    
+)
+from .authz_extensions import (
+    create_insert_permissions,
+    create_update_permissions,
+    create_delete_permissions,
+    filter_by_permissions,
+    VIEWER_ROLES,
+    EDITOR_ROLES,
+    ADMIN_ROLES
+)
 from uoishelpers.resolvers import (
     getLoadersFromInfo,
     getUserFromInfo,
@@ -504,34 +513,17 @@ class EventDeleteGQLModel:
 )
 class EventMutation:
     @strawberry.mutation(
-        description="""Insert a Event""",
-        permission_classes=[
-            OnlyForAuthentized
-            # SimpleInsertPermission[EventGQLModel](roles=["administrátor"])
-        ],
-        extensions=[
-            # UpdatePermissionCheckRoleFieldExtension[GroupGQLModel](roles=["administrátor", "personalista"]),
-            UserAccessControlExtension[UpdateError, EventGQLModel](
-                roles=[
-                    "plánovací administrátor", 
-                    # "personalista"
-                ]
-            ),
-            UserRoleProviderExtension[UpdateError, EventGQLModel](),
-            RbacProviderExtension[UpdateError, EventGQLModel](),
-            LoadDataExtension[UpdateError, EventGQLModel](
-                getLoader=EventGQLModel.getLoader,
-                primary_key_name="masterevent_id"
-            )
-        ],
+        description="Create event - user becomes creator with permanent access",
+        extensions=create_insert_permissions(
+            InsertError[EventGQLModel],
+            EventGQLModel,
+            required_roles=EDITOR_ROLES
+        )
     )
     async def event_insert(
         self,
         info: strawberry.Info,
         event: EventInsertGQLModel,
-        db_row: typing.Any,
-        rbacobject_id: IDType,
-        user_roles: typing.List[dict],
     ) -> typing.Union[EventGQLModel, InsertError[EventGQLModel]]:
         return await Insert[EventGQLModel].DoItSafeWay(info=info, entity=event)
     
@@ -566,23 +558,12 @@ class EventMutation:
     
 
     @strawberry.mutation(
-        description="""Update a Event""",
-        permission_classes=[
-            OnlyForAuthentized
-            # SimpleUpdatePermission[EventGQLModel](roles=["administrátor"])
-        ],
-        extensions=[
-            # UpdatePermissionCheckRoleFieldExtension[GroupGQLModel](roles=["administrátor", "personalista"]),
-            UserAccessControlExtension[UpdateError, EventGQLModel](
-                roles=[
-                    "plánovací administrátor", 
-                    # "personalista"
-                ]
-            ),
-            UserRoleProviderExtension[UpdateError, EventGQLModel](),
-            RbacProviderExtension[UpdateError, EventGQLModel](),
-            LoadDataExtension[UpdateError, EventGQLModel]()
-        ],
+        description="Update event - creator or group editor can modify",
+        extensions=create_update_permissions(
+            UpdateError[EventGQLModel],
+            EventGQLModel,
+            required_roles=EDITOR_ROLES
+        )
     )
     async def event_update(
         self,

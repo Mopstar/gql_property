@@ -8,6 +8,7 @@ sqlalchemy-cockroachdb
 
 aiohttp
 requests
+httpx>=0.24.0
 
 sqlalchemy
 sqlalchemy_utils

@@ -36,12 +36,47 @@ def UUIDColumn(**kwargs):
 IDType = uuid.UUID
 
 class BaseModel(MappedAsDataclass, DeclarativeBase):
+    """Base model with audit fields and RBAC support.
+    
+    All entities inherit from BaseModel to get:
+    - UUID primary key (id)
+    - Audit timestamps (created, lastchange)
+    - User tracking (createdby_id, changedby_id) - references external UG service
+    - RBAC integration (rbacobject_id)
+    
+    Note: User IDs reference external User-Group service, no FK constraints.
+    """
+    
     id: Mapped[IDType] = UUIDColumn(index=True, primary_key=True, default_factory=uuid.uuid4)
 
-    created: Mapped[datetime.datetime] = mapped_column(default=None, nullable=True, server_default=sqlalchemy.sql.func.now(), comment="date time of creation")
-    lastchange: Mapped[datetime.datetime] = mapped_column(default=None, nullable=True, server_default=sqlalchemy.sql.func.now(), comment="date time stamp")
+    # Audit timestamps - automatically managed by database
+    created: Mapped[datetime.datetime] = mapped_column(
+        default=None,
+        nullable=True,
+        server_default=sqlalchemy.sql.func.now(),
+        comment="timestamp of creation"
+    )
+    
+    lastchange: Mapped[datetime.datetime] = mapped_column(
+        default=None,
+        nullable=True,
+        server_default=sqlalchemy.sql.func.now(),
+        onupdate=sqlalchemy.sql.func.now(),
+        comment="timestamp of last modification"
+    )
 
-    createdby_id: Mapped[IDType] = UUIDFKey(ForeignKey("users.id"), comment="id of user who created this entity")
-    changedby_id: Mapped[IDType] = UUIDFKey(ForeignKey("users.id"), comment="id of user who changed this entity")
-    rbacobject_id: Mapped[IDType] = UUIDFKey(comment="id rbacobject")
+    # User tracking - who created/modified this record
+    # Note: User IDs reference external UG service, no FK constraint
+    createdby_id: Mapped[IDType] = UUIDFKey(
+        comment="user who created this entity (references external UG service)"
+    )
+    
+    changedby_id: Mapped[IDType] = UUIDFKey(
+        comment="user who last modified this entity (references external UG service)"
+    )
+
+    # RBAC integration - reference to role-based access control object
+    rbacobject_id: Mapped[IDType] = UUIDFKey(
+        comment="rbac object identifier for permission management"
+    )
 ###

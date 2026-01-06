@@ -9,6 +9,15 @@ from uoishelpers.gqlpermissions import (
     SimpleUpdatePermission,
     SimpleDeletePermission
 )
+from .authz_extensions import (
+    create_insert_permissions,
+    create_update_permissions,
+    create_delete_permissions,
+    filter_by_permissions,
+    VIEWER_ROLES,
+    EDITOR_ROLES,
+    ADMIN_ROLES
+)
 from uoishelpers.resolvers import (
     getLoadersFromInfo,
     getUserFromInfo,
@@ -249,11 +258,23 @@ class PurchaseQuery:
         permission_classes=[OnlyForAuthentized],
     )
 
-    purchase_page: typing.List[PurchaseGQLModel] = strawberry.field(
-        description="Get a page of purchases",
-        resolver=PageResolver[PurchaseGQLModel](whereType=PurchaseInputFilter),
-        permission_classes=[OnlyForAuthentized],
+    @strawberry.field(
+        description="Get purchases (filtered by creator ownership or group permissions)",
+        permission_classes=[OnlyForAuthentized]
     )
+    async def purchase_page(
+        self, 
+        info: strawberry.types.Info, 
+        skip: int = 0, 
+        limit: int = 10
+    ) -> typing.List[PurchaseGQLModel]:
+        resolver = PageResolver[PurchaseGQLModel](whereType=PurchaseInputFilter)
+        all_results = await resolver(self, info, skip=skip, limit=limit)
+        # Filter by permissions: creator ownership OR group role
+        filtered_results = await filter_by_permissions(
+            info, all_results, required_roles=VIEWER_ROLES
+        )
+        return filtered_results
 
 
 ###################################################################################################
@@ -339,70 +360,46 @@ class PurchaseDeleteGQLModel:
 class PurchaseMutation:
 
     @strawberry.mutation(
-        description="Insert a Purchase",
-        permission_classes=[OnlyForAuthentized],
-        extensions=[
-            UserAccessControlExtension[InsertError, PurchaseGQLModel](
-                roles=["nákupní administrátor"]
-            ),
-            UserRoleProviderExtension[InsertError, PurchaseGQLModel](),
-            RbacProviderExtension[InsertError, PurchaseGQLModel](),
-            LoadDataExtension[InsertError, PurchaseGQLModel](
-                getLoader=PurchaseGQLModel.getLoader,
-                primary_key_name="masterpurchase_id"
-            )
-        ],
+        description="Create purchase - user becomes creator with permanent access",
+        extensions=create_insert_permissions(
+            InsertError[PurchaseGQLModel],
+            PurchaseGQLModel,
+            required_roles=EDITOR_ROLES
+        )
     )
     async def purchase_insert(
             self,
             info: strawberry.Info,
             purchase: PurchaseInsertGQLModel,
-            db_row: typing.Any,
-            rbacobject_id: IDType,
-            user_roles: typing.List[dict],
     ) -> typing.Union[PurchaseGQLModel, InsertError[PurchaseGQLModel]]:
         return await Insert[PurchaseGQLModel].DoItSafeWay(info=info, entity=purchase)
 
     @strawberry.mutation(
-        description="Update a Purchase",
-        permission_classes=[OnlyForAuthentized],
-        extensions=[
-            UserAccessControlExtension[UpdateError, PurchaseGQLModel](
-                roles=["nákupní administrátor"]
-            ),
-            UserRoleProviderExtension[UpdateError, PurchaseGQLModel](),
-            RbacProviderExtension[UpdateError, PurchaseGQLModel](),
-            LoadDataExtension[UpdateError, PurchaseGQLModel]()
-        ],
+        description="Update purchase - creator or group editor can modify",
+        extensions=create_update_permissions(
+            UpdateError[PurchaseGQLModel],
+            PurchaseGQLModel,
+            required_roles=EDITOR_ROLES
+        )
     )
     async def purchase_update(
             self,
             info: strawberry.Info,
             purchase: PurchaseUpdateGQLModel,
-            db_row: typing.Any,
-            rbacobject_id: IDType,
-            user_roles: typing.List[dict],
     ) -> typing.Union[PurchaseGQLModel, UpdateError[PurchaseGQLModel]]:
         return await Update[PurchaseGQLModel].DoItSafeWay(info=info, entity=purchase)
 
     @strawberry.mutation(
-        description="Delete a Purchase",
-        permission_classes=[OnlyForAuthentized],
-        extensions=[
-            UserAccessControlExtension[DeleteError, PurchaseGQLModel](
-                roles=["nákupní administrátor"]
-            ),
-            UserRoleProviderExtension[DeleteError, PurchaseGQLModel](),
-            RbacProviderExtension[DeleteError, PurchaseGQLModel](),
-            LoadDataExtension[DeleteError, PurchaseGQLModel]()
-        ],
+        description="Delete purchase - creator or group admin can remove",
+        extensions=create_delete_permissions(
+            DeleteError[PurchaseGQLModel],
+            PurchaseGQLModel,
+            required_roles=ADMIN_ROLES
+        )
     )
     async def purchase_delete(
             self,
             info: strawberry.Info,
             purchase: PurchaseDeleteGQLModel,
-            db_row: typing.Any,
-            rbacobject_id: IDType,
-            user_roles: typing.List[dict],
     ) -> typing.Optional[DeleteError[PurchaseGQLModel]]:
         return await Delete[PurchaseGQLModel].DoItSafeWay(info=info, entity=purchase)

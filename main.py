@@ -97,6 +97,24 @@ async def RunOnceAndReturnSessionMaker():
 
 # region FastAPI setup
 async def get_context(request: Request):
+    """Build GraphQL context with UG service integration.
+    
+    Context includes:
+    - request: FastAPI Request object
+    - auth_header: JWT token from Authorization header or cookies
+    - ug_client: Async function to query external User-Group service
+    - user: Resolved user from UG service (id, fullname, email, roles)
+    - session: AsyncSession (added by SessionCommitExtensionFactory)
+    - loaders: LoaderMap (added by SessionCommitExtensionFactory)
+    
+    Authentication Flow:
+    1. Extract JWT token from Authorization header or cookies
+    2. Forward token to UG service to resolve user
+    3. Get user's roles with group hierarchy
+    4. Store user data in context for authorization extensions
+    """
+    import httpx
+    
     asyncSessionMaker = await RunOnceAndReturnSessionMaker()
         
     from src.Dataloaders import createLoadersContext
@@ -104,6 +122,106 @@ async def get_context(request: Request):
 
     result = {**context}
     result["request"] = request
+    
+    # ===========================================================================================
+    # Extract JWT token from Authorization header or cookies
+    # ===========================================================================================
+    auth_header = None
+    try:
+        auth_header = request.headers.get("authorization") or request.headers.get("Authorization")
+    except Exception:
+        auth_header = None
+    
+    if auth_header:
+        result.setdefault('auth_header', auth_header)
+    else:
+        # Try common cookie names from frontend login flow
+        try:
+            cookies = getattr(request, 'cookies', {}) or {}
+            for ck in ('access_token', 'accessToken', 'token', 'AUTH_TOKEN', 'authorization'):
+                if ck in cookies and cookies.get(ck):
+                    token_val = cookies.get(ck)
+                    # Normalize to Bearer <token>
+                    if not token_val.lower().startswith('bearer '):
+                        token_val = 'Bearer ' + token_val
+                    result.setdefault('auth_header', token_val)
+                    break
+        except Exception:
+            pass
+
+    # ===========================================================================================
+    # Create UG service client helper
+    # ===========================================================================================
+    async def _ug_client(query, variables=None):
+        """Helper to query external User-Group GraphQL service.
+        
+        Forwards Authorization header from incoming request to UG service.
+        Used by authorization extensions to load user roles.
+        
+        Args:
+            query: GraphQL query string
+            variables: Optional query variables
+            
+        Returns:
+            dict: GraphQL response from UG service
+        """
+        try:
+            headers = {"Content-Type": "application/json"}
+            if result.get('auth_header'):
+                headers['Authorization'] = result.get('auth_header')
+            
+            endpoint = os.getenv('GQLUG_ENDPOINT_URL')
+            if not endpoint:
+                logging.warning('GQLUG_ENDPOINT_URL not configured')
+                return {"errors": ["UG service not configured"]}
+            
+            async with httpx.AsyncClient(timeout=5.0) as client:
+                resp = await client.post(
+                    endpoint, 
+                    json={"query": query, "variables": variables or {}}, 
+                    headers=headers
+                )
+                resp.raise_for_status()
+                return resp.json()
+        except Exception as e:
+            logging.debug(f"UG client call failed: {e}")
+            return {"errors": [str(e)]}
+
+    result['ug_client'] = _ug_client
+
+    # ===========================================================================================
+    # Resolve current user from UG service
+    # ===========================================================================================
+    # Query includes full role structure: group hierarchy + role types
+    # Extensions use this for authorization checks
+    try:
+        me_resp = await _ug_client('''query { 
+            me { 
+                id 
+                fullname 
+                email 
+                roles {
+                    group {
+                        id
+                        name
+                        mastergroupId
+                    }
+                    roletype {
+                        id
+                        name
+                    }
+                }
+            } 
+        }''')
+        me = None
+        if isinstance(me_resp, dict):
+            me = me_resp.get('data', {}).get('me')
+        if me:
+            result.setdefault('user', me)
+            logging.info(f"User authenticated: {me.get('id')} - {me.get('fullname')}")
+    except Exception as e:
+        logging.debug(f"Failed to resolve user: {e}")
+    
     return result
 
 innerlifespan = None
