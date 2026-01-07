@@ -300,7 +300,6 @@ class PurchaseQuery:
 
 @strawberry.input(description="Insert Purchase")
 class PurchaseInsertGQLModel(TreeInputStructureMixin):
-    __annotations__ = {}  # Ensure annotations exist for TreeInputStructureMixin
     getLoader = PurchaseGQLModel.getLoader
 
     masterpurchase_id: typing.Optional[IDType] = strawberry.field(

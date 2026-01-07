@@ -153,7 +153,6 @@ class PurchaseItemQuery:
 
 @strawberry.input(description="Insert Purchase Item")
 class PurchaseItemInsertGQLModel(InputModelMixin):
-    __annotations__ = {}  # Ensure annotations exist for InputModelMixin
 
     @staticmethod
     def getLoader(info):

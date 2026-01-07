@@ -301,7 +301,6 @@ from uoishelpers.resolvers import TreeInputStructureMixin, InputModelMixin
     description="""Input type for creating a Event"""
 )
 class EventInsertGQLModel(TreeInputStructureMixin):
-    __annotations__ = {}  # Ensure annotations exist for TreeInputStructureMixin
     getLoader = EventGQLModel.getLoader
     masterevent_id: typing.Optional[IDType] = strawberry.field(
         description="""Event parent id""",
@@ -344,7 +343,6 @@ class EventInsertGQLModel(TreeInputStructureMixin):
     description="""Input type for creating a Plan"""
 )
 class EventPlanInsertGQLModel(TreeInputStructureMixin):
-    __annotations__ = {}  # Ensure annotations exist for TreeInputStructureMixin
     getLoader = EventGQLModel.getLoader
     rbacobject_id: IDType = strawberry.field(
         description="""id of the group the plan is for""",
