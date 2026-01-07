@@ -1,3 +1,4 @@
+import logging
 import sqlalchemy
 import sys
 import asyncio
@@ -24,9 +25,10 @@ def createByIdTest(tableName, queryEndpoint, attributeNames=["id", "name"]):
         content = "{" + ", ".join(attributeNames) + "}"
         query = "query($id: UUID!){" f"{queryEndpoint}(id: $id)" f"{content}" "}"
 
-        context_value = await createContext(async_session_maker)
+        context_value = createContext(async_session_maker)
         variable_values = {"id": f'{datarow["id"]}'}
-        print("query for", query, "with", variable_values)
+        
+        logging.debug(f"query for {query} with {variable_values}")
 
         resp = await schema.execute(
             query, context_value=context_value, variable_values=variable_values
@@ -53,8 +55,8 @@ def createPageTest(tableName, queryEndpoint, attributeNames=["id", "name"]):
         content = "{" + ", ".join(attributeNames) + "}"
         query = "query{" f"{queryEndpoint}" f"{content}" "}"
 
-        context_value = await createContext(async_session_maker)
-        print("query for", query)
+        context_value = createContext(async_session_maker)
+        logging.debug(f"query for {query}")
 
         resp = await schema.execute(query, context_value=context_value)
 
@@ -91,11 +93,11 @@ def createResolveReferenceTest(tableName, gqltype, attributeNames=["id", "name"]
                 '}' + 
                 '}')
 
-            context_value = await createContext(async_session_maker)
-            print("query for", query)
+            context_value = createContext(async_session_maker)
+            logging.debug(f"query for {query}")
             resp = await schema.execute(query, context_value=context_value)
             data = resp.data
-            print(data, flush=True)
+            logging.debug(data)
             data = data['_entities'][0]
 
             assert data['id'] == rowid
@@ -105,10 +107,11 @@ def createResolveReferenceTest(tableName, gqltype, attributeNames=["id", "name"]
 def createFrontendQuery(query="{}", variables={}, asserts=[]):
     @pytest.mark.asyncio
     async def test_frontend_query():    
+        logging.debug("createFrontendQuery")
         async_session_maker = await prepare_in_memory_sqllite()
         await prepare_demodata(async_session_maker)
-        context_value = await createContext(async_session_maker)
-        print("query for", query, "with", variables)
+        context_value = createContext(async_session_maker)
+        logging.debug(f"query for {query} with {variables}")
         resp = await schema.execute(
             query=query, 
             variable_values=variables, 
@@ -117,7 +120,7 @@ def createFrontendQuery(query="{}", variables={}, asserts=[]):
 
         assert resp.errors is None
         respdata = resp.data
-        print(respdata)
+        logging.debug(f"response: {respdata}")
         for a in asserts:
             a(respdata)
     return test_frontend_query
@@ -216,7 +219,7 @@ test_query_event_with_subevents = createFrontendQuery(
 async def test_event_update():    
     async_session_maker = await prepare_in_memory_sqllite()
     await prepare_demodata(async_session_maker)
-    context_value = await createContext(async_session_maker)
+    context_value = createContext(async_session_maker)
     query="""
         query($id: UUID!) {
             result: eventById(id: $id) {
@@ -227,7 +230,7 @@ async def test_event_update():
     variables={
         "id": "5194663f-11aa-4775-91ed-5f3d79269fed"
     }
-    print("query for", query, "with", variables)
+    logging.debug(f"query for {query} with {variables}")
     resp = await schema.execute(
         query=query, 
         variable_values=variables, 
@@ -267,7 +270,7 @@ async def test_event_update():
         "lastchange": lastchange,
         "name": newName
     }
-    print("query for", query, "with", variables)
+    logging.debug(f"query for {query} with {variables}")
     resp = await schema.execute(
         query=query, 
         variable_values=variables, 
@@ -319,3 +322,75 @@ test_query_event_failed_update = createFrontendQuery(
     ]
 )
 
+test_query_event_sensitive_failed = createFrontendQuery(
+    query="""
+        query($id: UUID!) {
+            result: eventById(id: $id) {
+                id
+                name
+                lastchange
+                sensitiveMsg
+            }
+        }""",
+    variables={
+        "id": "5194663f-11aa-4775-91ed-5f3d79269fed",
+    },
+    asserts = [
+        lambda data: runAssert(data.get("result", None) is not None, "expected data.result"),
+        lambda data: runAssert(data["result"].get("sensitiveMsg", None) is not None, "expected not None ")
+    ]
+)
+
+test_query_hello = createFrontendQuery(
+    query="""{ hello }""",
+    variables={},
+    asserts = [
+        lambda data: runAssert(data.get("hello", None) is not None, "expected data.hello"),
+    ]
+)
+
+test_query_event_with_users = createFrontendQuery(
+    query="""
+        query($id: UUID!) {
+            result: eventById(id: $id) {
+                id
+                name
+                lastchange
+                users { 
+                    id 
+                    events {
+                        id
+                        name
+                    }
+                }
+            }
+        }""",
+    variables={
+        "id": "45b2df80-ae0f-11ed-9bd8-0242ac110002",
+    },
+    asserts = [
+        lambda data: runAssert(data.get("result", None) is not None, "expected data.result"),
+        lambda data: runAssert(data["result"].get("users", None) is not None, "expected not None ")
+    ]
+)
+
+test_query_user_with_events = createFrontendQuery(
+    query="""
+        query($id: UUID!) { 
+            result: _entities(representations: [{ __typename: "UserGQLModel", id: $id }]) {
+                ...on UserGQLModel { 
+                    id 
+                    events {
+                        id
+                        name
+                    }
+                }
+            }
+        }""",
+    variables={
+        "id": "89d1e724-ae0f-11ed-9bd8-0242ac110002",
+    },
+    asserts = [
+        lambda data: runAssert(data.get("result", None) is not None, "expected data.result")
+    ]
+)

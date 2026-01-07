@@ -1,53 +1,36 @@
-from functools import cache
-from DBDefinitions import (
-    EventModel
-    )
-from sqlalchemy.future import select
+"""
+Proxy module that re-exports database feeder helpers from `src.DBFeeder`
+while keeping the legacy import paths used in the provided tests.
+"""
+
+from typing import Any, Dict
+
+from src.DBFeeder import backupDB, initDB, get_demodata as _raw_get_demodata
+
+__all__ = ["initDB", "backupDB", "get_demodata"]
+
+_EVOLUTION_SUFFIX = "_evolution"
 
 
-import os
-import json
-from uoishelpers.feeders import ImportModels
-import datetime
-import uuid
-
-def get_demodata():
-
-    def datetime_parser(json_dict):
-        for (key, value) in json_dict.items():
-            if key in ["startdate", "enddate", "lastchange", "created"]:
-                if value is None:
-                    dateValueWOtzinfo = None
-                else:
-                    try:
-                        dateValue = datetime.datetime.fromisoformat(value)
-                        dateValueWOtzinfo = dateValue.replace(tzinfo=None)
-                    except:
-                        print("jsonconvert Error", key, value, flush=True)
-                        dateValueWOtzinfo = None
-                
-                json_dict[key] = dateValueWOtzinfo
-            if "id" in key:
-                json_dict[key] = uuid.UUID(value)
-        return json_dict
+def _normalize_keys(data: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    The historical fixtures reference tables without the `_evolution` suffix,
+    while the new dataset includes that suffix. We keep both variants so the
+    rest of the codebase can use either form.
+    """
+    result = dict(data)
+    for key, value in data.items():
+        if key.endswith(_EVOLUTION_SUFFIX):
+            base_key = key[: -len(_EVOLUTION_SUFFIX)]
+            result.setdefault(base_key, value)
+    return result
 
 
-    with open("./systemdata.json", "r", encoding='utf-8') as f:
-        jsonData = json.load(f, object_hook=datetime_parser)
-
-    return jsonData
-
-async def initDB(asyncSessionMaker):
-
-    defaultNoDemo = "False"
-    default = "True"
-    if default == os.environ.get("DEMO", defaultNoDemo):
-        dbModels = []
-    else:
-        dbModels = [
-            EventModel
-        ]
-
-    jsonData = get_demodata()
-    await ImportModels(asyncSessionMaker, dbModels, jsonData)
-    pass
+def get_demodata() -> Dict[str, Any]:
+    """
+    Return the demo dataset with backwards-compatible keys.
+    """
+    raw = _raw_get_demodata()
+    if isinstance(raw, dict):
+        return _normalize_keys(raw)
+    return raw
