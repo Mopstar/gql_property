@@ -60,7 +60,7 @@ services:
         SERVICES=
         [
           {"name": "ug", "url": "http://gql_ug:8000/gql"},
-          {"name": "property", "url": "http://host.docker.internal:8000/gql"}
+          {"name": "evolution", "url": "http://host.docker.internal:8001/gql"}
         ]       
     healthcheck:
       # definice, umoznujici provest test, zda je kontejner v poradku (vsimnete si portu a srovnejte s portem v environment)

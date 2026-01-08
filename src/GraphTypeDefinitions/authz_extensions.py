@@ -177,7 +177,14 @@ class AutoGroupAssignmentExtension(FieldExtension):
     - One write group: Use that group
     - Multiple groups: Use most specific (leaf) group
     - Leaf group: Group that is NOT a parent of any other user group
+    
+    Args:
+        required_roles: Roles required to create entities (defaults to EDITOR_ROLES)
     """
+    
+    def __init__(self, required_roles: typing.List[str] = None):
+        super().__init__()
+        self.required_roles = required_roles if required_roles is not None else EDITOR_ROLES
     
     async def resolve_async(
         self,
@@ -202,7 +209,6 @@ class AutoGroupAssignmentExtension(FieldExtension):
                 user = info.context.get("user", {})
                 roles = user.get("roles", [])
                 
-                write_roles = EDITOR_ROLES
                 write_groups = []
                 all_user_roles = []  # For debugging
                 for role in roles:
@@ -211,7 +217,7 @@ class AutoGroupAssignmentExtension(FieldExtension):
                     group_name = role.get("group", {}).get("name", "")
                     all_user_roles.append(f"{roletype_name} in {group_name}")
                     
-                    if roletype_name in write_roles and group_id:
+                    if roletype_name in self.required_roles and group_id:
                         write_groups.append(group_id)
                 
                 if len(write_groups) >= 1:
@@ -234,11 +240,17 @@ class AutoGroupAssignmentExtension(FieldExtension):
                         kwargs['rbacobject_id'] = write_groups[0]
                 else:
                     user_fullname = user.get("fullname", "Unknown")
+                    user_id = user.get("id", "Unknown ID")
                     roles_str = ", ".join(all_user_roles) if all_user_roles else "NONE"
+                    required_roles_str = ', '.join(self.required_roles[:5])
+                    if len(self.required_roles) > 5:
+                        required_roles_str += f" (and {len(self.required_roles) - 5} more)"
+                    
                     raise PermissionError(
-                        f"User {user_fullname} does not have editor/admin role in any group. "
-                        f"User has roles: [{roles_str}]. "
-                        f"Cannot auto-assign group for creation."
+                        f"Permission denied. User '{user_fullname}' (ID: {user_id}) cannot create this entity. "
+                        f"Required roles: [{required_roles_str}]. "
+                        f"Your current roles: [{roles_str}]. "
+                        f"You need at least one of the required roles in a group to create content."
                     )
             else:
                 kwargs['rbacobject_id'] = current_rbac
@@ -308,8 +320,8 @@ class OwnershipPermissionExtension(FieldExtension):
         if not user_id:
             raise PermissionError("User not authenticated")
         
-        # Note: We no longer block users with empty roles array here
-        # They might still have group memberships that grant implicit viewer access
+        # Detect if this is an INSERT operation (no db_row means new entity)
+        is_insert = db_row is None
         
         # ===================================================================
         # CHECK 1: Creator Ownership (permanent access)
@@ -337,6 +349,28 @@ class OwnershipPermissionExtension(FieldExtension):
             if str(rbacobject_id) in [str(g) for g in accessible_groups]:
                 # User has required role in entity's group or parent group
                 return await next_(source, info, **kwargs)
+        
+        # ===================================================================
+        # CHECK 4: Implicit Viewer Access (group members can view)
+        # Only for non-INSERT operations (UPDATE/DELETE still need proper roles)
+        # ===================================================================
+        if not is_insert and rbacobject_id and user_roles:
+            # Check if user is a member of the entity's group (any role)
+            user_groups = []
+            for role in user_roles:
+                group_id = role.get('group', {}).get('id')
+                if group_id:
+                    user_groups.append(group_id)
+                    # Add child groups
+                    children = await get_group_children(info, group_id)
+                    user_groups.extend(children)
+            
+            if str(rbacobject_id) in [str(g) for g in user_groups]:
+                # User is a member of entity's group - allow view operations
+                # But this should only apply to queries, not mutations
+                # Since mutations go through specific permission extensions,
+                # we deny here for non-matching roles
+                pass
         
         # ===================================================================
         # DENIED - Neither creator nor group member with required role
@@ -558,6 +592,18 @@ async def filter_by_permissions(
     # Get accessible groups (with explicit roles)
     accessible_groups = await get_accessible_groups(info, user_roles, required_roles)
     
+    # Get all user's groups (for implicit viewer access)
+    user_groups = []
+    for role in user_roles:
+        group_id = role.get('group', {}).get('id')
+        if group_id:
+            user_groups.append(group_id)
+            # Add child groups (hierarchical access)
+            children = await get_group_children(info, group_id)
+            user_groups.extend(children)
+    
+    user_groups = list(set(user_groups))  # Remove duplicates
+    
     # Filter items
     filtered = []
     for item in items:
@@ -571,6 +617,11 @@ async def filter_by_permissions(
         
         # Check group permissions (with explicit roles)
         if rbacobject_id and str(rbacobject_id) in [str(g) for g in accessible_groups]:
+            filtered.append(item)
+            continue
+        
+        # Check implicit viewer access (group membership without explicit role)
+        if rbacobject_id and str(rbacobject_id) in [str(g) for g in user_groups]:
             filtered.append(item)
             continue
     
@@ -592,7 +643,7 @@ def create_insert_permissions(
     1. PermissionFilterExtension - filters kwargs (executes LAST)
     2. OwnershipPermissionExtension - checks user has required roles
     3. UserRoleProviderExtension - loads user roles from UG service
-    4. AutoGroupAssignmentExtension - auto-assigns rbacobject_id
+    4. AutoGroupAssignmentExtension - auto-assigns rbacobject_id and validates roles
     
     Args:
         error_type: Error union type (e.g., InsertError[ModelGQLType])
@@ -606,7 +657,7 @@ def create_insert_permissions(
         PermissionFilterExtension(),
         OwnershipPermissionExtension(roles=required_roles),
         UserRoleProviderExtension(),
-        AutoGroupAssignmentExtension(),
+        AutoGroupAssignmentExtension(required_roles=required_roles),
     ]
 
 
