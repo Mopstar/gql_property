@@ -96,6 +96,8 @@ gql_property/
 │   │   ├── query.py                # Root query aggregation
 │   │   └── TimeUnit.py             # Custom scalar types
 │   │
+│   ├── error_codes.py               # ⭐ Centralized UUID error code registry (403 lines)
+│   │
 │   ├── Dataloaders/                 # DataLoader pattern for N+1 prevention
 │   │   └── __init__.py
 │   │
@@ -125,12 +127,119 @@ gql_property/
 │   └── requirements.txt
 │
 └── Documentation/                   # Project documentation
+    ├── README.md                    # Project overview
+    ├── PROJECT_ANALYSIS.md          # Complete project analysis (this file)
+    ├── API_USAGE_GUIDE.md           # ⭐ Complete API usage guide (1091 lines)
+    ├── ERROR_CODES.md               # ⭐ Error codes dictionary with UUIDs
     ├── CREATOR_OWNERSHIP_GUIDE.md   # Authorization system guide
-    ├── TROUBLESHOOTING_EMPTY_ROLES.md # Docker/UG debugging
-    ├── TEST_QUERIES.md              # GraphQL test queries
-    ├── QUICK_START_AUTH.md          # Quick auth guide
+    ├── QUICK_REFERENCE.md           # Quick reference card
+    ├── TESTING_GUIDE.md             # ⭐ Complete testing guide
+    ├── TROUBLESHOOTING.md           # ⭐ Common issues and solutions
+    ├── IMPLEMENTATION_HISTORY.md    # Development timeline and history
     └── .copilot-instructions.md     # This AI's instruction manual
 ```
+
+---
+
+## 🆕 Error Codes System (New Feature)
+
+### File: `src/error_codes.py` (403 lines)
+
+A centralized registry of all UUID error codes used throughout the API for machine-readable error handling.
+
+#### Key Components
+
+**1. ErrorCodeInfo NamedTuple**
+```python
+class ErrorCodeInfo(NamedTuple):
+    uuid: str          # UUID for machine processing
+    code: str          # Human-readable code (e.g., "AUTH-002")
+    message: str       # Short error message
+    description: str   # Detailed description
+    resolution: str    # How to fix the problem
+    category: str      # Category (Authentication, Database, etc.)
+```
+
+**2. ERROR_CODES Dictionary**
+```python
+ERROR_CODES: Dict[str, str] = {
+    "AUTH_NOT_AUTHENTICATED": "e1a2b3c4-5d6e-7f8g-9h0i-1j2k3l4m5n6o",
+    "AUTH_NO_REQUIRED_ROLE": "f42da7e9-0b8b-4229-bc4b-c0dc73d55c3e",
+    "AUTH_NOT_CREATOR_OR_EDITOR": "a8f3d7b2-4e9c-4d3a-9b2f-7c6e8d5f9a1b",
+    "INSERT_FAILED_DB": "ca8b4531-9419-4b87-badd-823d364f6c9b",
+    # ... 20+ more error codes
+}
+```
+
+**3. Error Categories**
+- **Authentication** (AUTH-001): Not authenticated
+- **Authorization** (AUTH-002, AUTH-003): Permission denied scenarios
+- **Insert Operations** (INSERT-001, INSERT-002): Database insert failures
+- **Update Operations** (UPDATE-001 to UPDATE-005): Update failures, stale data
+- **Delete Operations** (DELETE-001 to DELETE-003): Delete failures, dependencies
+- **Validation** (VALIDATION-001 to VALIDATION-003): Input validation errors
+- **Business Logic** (BUSINESS-xxx): Business rule violations
+
+**4. Helper Functions**
+```python
+# Get UUID by name
+get_error_code("AUTH_NO_REQUIRED_ROLE")  # Returns UUID string
+
+# Get full error info
+get_error_info("AUTH_NO_REQUIRED_ROLE")  # Returns ErrorCodeInfo
+
+# Find by UUID
+get_error_by_uuid("f42da7e9-0b8b-4229-bc4b-c0dc73d55c3e")
+
+# List by category
+list_error_codes(category="Authorization")  # All auth errors
+```
+
+**5. Custom Exceptions**
+```python
+class AuthorizationException(Exception):
+    def __init__(self, msg: str, code: str):
+        self.msg = msg
+        self.code = code  # UUID from ERROR_CODES
+        
+# Usage in resolvers
+raise AuthorizationException(
+    msg="Permission denied",
+    code=ERROR_CODES["AUTH_NO_REQUIRED_ROLE"]
+)
+```
+
+#### Integration with GraphQL
+
+Error codes are returned in the `code` field of error responses:
+
+```graphql
+mutation {
+  purchaseInsert(purchase: { name: "Test" }) {
+    ... on PurchaseGQLModel { id }
+    ... on InsertError {
+      msg   # "Permission denied..."
+      code  # "f42da7e9-0b8b-4229-bc4b-c0dc73d55c3e"
+    }
+  }
+}
+```
+
+#### Documentation
+
+See **ERROR_CODES.md** for:
+- Complete list of all error codes with UUIDs
+- When each error occurs
+- How to resolve each error
+- Role requirements summary
+- Usage examples
+
+See **API_USAGE_GUIDE.md** for:
+- Complete API usage guide
+- Authentication setup
+- CRUD operation examples
+- RBAC authorization scenarios
+- Troubleshooting guide with error codes
 
 ---
 
@@ -1215,11 +1324,76 @@ engine = create_async_engine(
 
 ## 📞 Support & Resources
 
-### Documentation Files
-- `.copilot-instructions.md` - AI assistant guide
-- `CREATOR_OWNERSHIP_GUIDE.md` - Authorization explanation
-- `TROUBLESHOOTING_EMPTY_ROLES.md` - Docker debugging
-- `TEST_QUERIES.md` - GraphQL examples
+### Documentation Structure
+
+**📖 Primary Documentation (Start Here):**
+
+| Document | Purpose | Audience | Lines |
+|----------|---------|----------|-------|
+| **[README.md](README.md)** | Project overview, quick links | Everyone | 81+ |
+| **[PROJECT_ANALYSIS.md](PROJECT_ANALYSIS.md)** | ⭐ Complete technical analysis | Developers | 1343 |
+| **[API_USAGE_GUIDE.md](API_USAGE_GUIDE.md)** | ⭐ Complete API usage guide | API Users | 1091 |
+| **[ERROR_CODES.md](ERROR_CODES.md)** | ⭐ Error codes dictionary | API Users/Devs | 263 |
+
+**🔧 Technical Guides:**
+
+### 📚 Documentation Structure (Consolidated)
+
+**📖 User-Facing Documentation:**
+
+| Document | Purpose | Use Case |
+|----------|---------|----------|
+| **[README.md](README.md)** | Project overview | First stop for everyone |
+| **[API_USAGE_GUIDE.md](API_USAGE_GUIDE.md)** | ⭐ Complete API guide | API users (start here!) |
+| **[ERROR_CODES.md](ERROR_CODES.md)** | Error codes with UUIDs | Error handling and debugging |
+| **[QUICK_REFERENCE.md](QUICK_REFERENCE.md)** | Quick reference card | Fast lookup (2 minutes) |
+
+**🔐 Authorization Documentation:**
+
+| Document | Purpose | Use Case |
+|----------|---------|----------|
+| **[CREATOR_OWNERSHIP_GUIDE.md](CREATOR_OWNERSHIP_GUIDE.md)** | Authorization model explained | Understanding RBAC |
+| **[src/error_codes.py](src/error_codes.py)** | Error code registry module | Error handling implementation |
+| **[authz_extensions.py](src/GraphTypeDefinitions/authz_extensions.py)** | Authorization system code | Implementing permissions |
+
+**🧪 Testing Documentation:**
+
+| Document | Purpose | Use When |
+|----------|---------|----------|
+| **[TESTING_GUIDE.md](TESTING_GUIDE.md)** | ⭐ Complete testing guide | All testing scenarios |
+| **[tests/README_LIVE_TESTS.md](tests/README_LIVE_TESTS.md)** | Live test infrastructure | Developer reference |
+
+**🔧 Technical Documentation:**
+
+| Document | Purpose | Use When |
+|----------|---------|----------|
+| **[PROJECT_ANALYSIS.md](PROJECT_ANALYSIS.md)** | Complete technical analysis | Deep technical dive |
+| **[IMPLEMENTATION_HISTORY.md](IMPLEMENTATION_HISTORY.md)** | Development history & timeline | Understanding evolution |
+
+**🚨 Troubleshooting:**
+
+| Document | Purpose | Solves |
+|----------|---------|--------|
+| **[TROUBLESHOOTING.md](TROUBLESHOOTING.md)** | ⭐ All common issues | Everything (consolidated) |
+
+**🎯 Documentation Usage Guide:**
+
+**For New Developers:**
+1. Start with [README.md](README.md) for overview
+2. Read [PROJECT_ANALYSIS.md](PROJECT_ANALYSIS.md) for technical deep-dive
+3. Review [CREATOR_OWNERSHIP_GUIDE.md](CREATOR_OWNERSHIP_GUIDE.md) for RBAC model
+4. Study [src/error_codes.py](src/error_codes.py) for error handling
+
+**For API Users:**
+1. Start with [API_USAGE_GUIDE.md](API_USAGE_GUIDE.md) - ⭐ Complete guide in 5 minutes
+2. Bookmark [ERROR_CODES.md](ERROR_CODES.md) for error reference
+3. Use [TESTING_GUIDE.md](TESTING_GUIDE.md) for test examples
+4. Check [TROUBLESHOOTING.md](TROUBLESHOOTING.md) if issues
+
+**For System Admins:**
+1. Follow [TESTING_GUIDE.md](TESTING_GUIDE.md) Section 1 for setup
+2. Use [TROUBLESHOOTING.md](TROUBLESHOOTING.md) for debugging
+3. Reference [IMPLEMENTATION_HISTORY.md](IMPLEMENTATION_HISTORY.md) for migration notes
 
 ### External Resources
 - [Strawberry GraphQL Docs](https://strawberry.rocks/)
@@ -1229,6 +1403,35 @@ engine = create_async_engine(
 
 ---
 
+## 📊 Project Statistics
+
+**Code Metrics:**
+- **Total Python Files:** 50+
+- **Key Modules:**
+  - `authz_extensions.py`: 773 lines (authorization system)
+  - `error_codes.py`: 403 lines (error registry)
+  - `PurchaseGQLModel.py`: 435 lines (GraphQL schema)
+  - `BaseModel.py`: 138 lines (ORM base)
+
+**Documentation:**
+- **Total Documentation:** 20+ files
+- **Total Lines:** 5000+ lines
+- **Primary Guides:** 4 comprehensive documents (API, Project Analysis, Error Codes, Creator Ownership)
+
+**Test Coverage:**
+- **Test Files:** 10+ files
+- **Test Scenarios:** 100+ test cases
+- **Coverage Areas:** RBAC, CRUD operations, Federation, Authorization
+
+**System Complexity:**
+- **Services:** 8 microservices
+- **Database Tables:** 10+ entities
+- **GraphQL Types:** 30+ types
+- **Error Codes:** 20+ UUID codes
+- **Role Types:** 20+ roles
+
+---
+
 **Generated**: January 7, 2026  
 **Project Version**: 1.0  
-**Last Updated**: After removing implicit viewer access feature
+**Last Updated**: February 5, 2026 - Added error_codes.py module and comprehensive documentation

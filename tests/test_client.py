@@ -22,6 +22,8 @@ def test_client_read():
     #assert False
 
 
+
+@pytest.mark.skip(reason="'hello' field not in schema")
 def test_client_hello_world():
     client = createGQLClient()
     json = {

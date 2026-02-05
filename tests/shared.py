@@ -54,7 +54,15 @@ def createContext(asyncSessionMaker, withuser=True):
         "id": "2d9dc5ca-a4a2-11ed-b9df-0242ac120003",
         "name": "John",
         "surname": "Newbie",
-        "email": "john.newbie@world.com"
+        "email": "john.newbie@world.com",
+        "roles": [
+            {
+                "id": "test-role-id",
+                "valid": True,
+                "roletype": {"id": "editor-role-type", "name": "editor"},
+                "group": {"id": "test-group-id", "name": "Test Group"}
+            }
+        ]
     }
     if withuser:
         loadersContext["user"] = user

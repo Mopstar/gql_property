@@ -3,7 +3,13 @@
 **Complete testing infrastructure for Purchase/Property GraphQL service with live server integration.**
 
 **Created:** January 8, 2026  
+**Last Updated:** February 5, 2026  
 **Status:** ✅ Ready for Testing
+
+> **📝 Note:** This is a supplementary guide for developers. For the complete testing guide, see:
+> - **[../TESTING_GUIDE.md](../TESTING_GUIDE.md)** - ⭐ Complete testing guide (start here!)
+> - **[../API_USAGE_GUIDE.md](../API_USAGE_GUIDE.md)** - API usage examples
+> - **[../TROUBLESHOOTING.md](../TROUBLESHOOTING.md)** - Common testing issues
 
 ---
 
@@ -293,9 +299,10 @@ tests/test_purchases_live.py::TestPurchaseCRUDLive::test_purchase_update_live SK
 
 ## 📚 Additional Resources
 
-- **LIVE_TEST_ANALYSIS.md** - Complete implementation analysis
-- **QUICK_TEST_SETUP.md** - 5-minute quick start guide
-- **gql_evolution tests/** - Reference implementation
+- **[../TESTING_GUIDE.md](../TESTING_GUIDE.md)** - ⭐ Complete testing guide
+- **[../IMPLEMENTATION_HISTORY.md](../IMPLEMENTATION_HISTORY.md)** - Complete implementation analysis
+- **[../API_USAGE_GUIDE.md](../API_USAGE_GUIDE.md)** - API usage examples
+- **[../TROUBLESHOOTING.md](../TROUBLESHOOTING.md)** - Common testing issues
 
 ---
 
