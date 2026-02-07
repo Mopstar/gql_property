@@ -10,6 +10,8 @@ from .BaseModel import BaseModel
 from .EventDBModel import EventModel
 from .EventInvitationModel import EventInvitationModel
 from .purchasemodel import PurchaseModel, PurchaseItem
+from .PurchaseTypeModel import PurchaseTypeModel
+from .EventTypeModel import EventTypeModel
 
 async def startEngine(connectionstring, makeDrop=False, makeUp=True):
     """Provede nezbytne ukony a vrati asynchronni SessionMaker"""

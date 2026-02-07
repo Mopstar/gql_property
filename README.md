@@ -4,17 +4,23 @@
 
 ## 🚀 Quick Links
 
+### Documentation Hub
+- **[Docs Folder](Docs/)** - 📚 **START HERE** - Complete organized documentation
+  - API guides, testing docs, implementation details, references
+
 ### Essential Documentation
-- **[API_USAGE_GUIDE.md](API_USAGE_GUIDE.md)** - ⭐ Complete API usage guide (start here!)
-- **[CREATOR_OWNERSHIP_GUIDE.md](CREATOR_OWNERSHIP_GUIDE.md)** - Authorization model explained
-- **[ERROR_CODES.md](ERROR_CODES.md)** - Error codes dictionary with UUIDs
-- **[QUICK_REFERENCE.md](QUICK_REFERENCE.md)** - Quick reference card
+- **[API_USAGE_GUIDE.md](Docs/API/API_USAGE_GUIDE.md)** - ⭐ Complete API usage guide (start here!)
+- **[CREATOR_OWNERSHIP_GUIDE.md](Docs/API/CREATOR_OWNERSHIP_GUIDE.md)** - Authorization model explained
+- **[ERROR_CODES.md](Docs/Reference/ERROR_CODES.md)** - Error codes dictionary with UUIDs
+- **[QUICK_REFERENCE.md](Docs/Reference/QUICK_REFERENCE.md)** - Quick reference card
 
 ### Guides & Reference
-- **[TESTING_GUIDE.md](TESTING_GUIDE.md)** - Complete testing guide
-- **[TROUBLESHOOTING.md](TROUBLESHOOTING.md)** - Common issues and solutions
-- **[PROJECT_ANALYSIS.md](PROJECT_ANALYSIS.md)** - Complete technical analysis
-- **[IMPLEMENTATION_HISTORY.md](IMPLEMENTATION_HISTORY.md)** - Development history
+- **[TESTING_GUIDE.md](Docs/Testing/TESTING_GUIDE.md)** - Complete testing guide
+- **[TESTING_CONSOLIDATED_SUMMARY.md](Docs/Testing/TESTING_CONSOLIDATED_SUMMARY.md)** - Testing migration & implementation
+- **[COVERAGE_GUIDE.md](Docs/Testing/COVERAGE_GUIDE.md)** - Code coverage setup and usage
+- **[TROUBLESHOOTING.md](Docs/Reference/TROUBLESHOOTING.md)** - Common issues and solutions
+- **[PROJECT_ANALYSIS.md](Docs/Reference/PROJECT_ANALYSIS.md)** - Complete technical analysis
+- **[IMPLEMENTATION_CONSOLIDATED_REPORT.md](Docs/Implementation/IMPLEMENTATION_CONSOLIDATED_REPORT.md)** - All implementations
 
 ## 🎯 Key Features
 
@@ -61,8 +67,9 @@ docker compose -f docker-compose.debug.yml up -d
 python main.py
 ```
 
-## 🧪 Testing
+## 🧪 Testing & Coverage
 
+### Quick Start
 ```powershell
 # Run all tests
 pytest
@@ -70,26 +77,53 @@ pytest
 # Run with coverage
 pytest --cov=src --cov-report=html
 
+# View coverage report
+start htmlcov\index.html
+
 # Run specific test file
 pytest tests/test_purchases.py -v
 ```
 
+### 📚 Testing Documentation
+
+**Consolidated Guide:**
+- **[TESTING_CONSOLIDATED_SUMMARY.md](Docs/Testing/TESTING_CONSOLIDATED_SUMMARY.md)** - 📋 Complete overview: migration, implementation, results
+
+**Step-by-Step Guides:**
+- **[TESTING_GUIDE.md](Docs/Testing/TESTING_GUIDE.md)** - Complete testing infrastructure guide
+- **[RBAC_TESTING_QUICKSTART.md](Docs/Testing/RBAC_TESTING_QUICKSTART.md)** - 🚀 Step-by-step RBAC testing guide
+- **[COVERAGE_GUIDE.md](Docs/Testing/COVERAGE_GUIDE.md)** - Code coverage setup and usage
+
+**Analysis & Reference:**
+- **[TESTING_AND_COVERAGE_ANALYSIS.md](Docs/Testing/TESTING_AND_COVERAGE_ANALYSIS.md)** - 🔍 Complete comparison & analysis
+- **[TESTING_MIGRATION_VISUAL_GUIDE.md](Docs/Testing/TESTING_MIGRATION_VISUAL_GUIDE.md)** - 📊 Visual roadmap & progress tracker
+- **[TESTING_QUICK_REFERENCE.md](Docs/Testing/TESTING_QUICK_REFERENCE.md)** - Quick commands
+
+### Current Status
+- ✅ Test Infrastructure: Excellent (19 files, 54+ tests)
+- ✅ Coverage Config: Complete (.coveragerc + pytest.ini)
+- ⚠️ RBAC Tests: Basic (expanding to 8+ scenarios)
+- 🚧 Performance Tests: In progress (5+ benchmarks planned)
+
+**Goal:** 90%+ code coverage with comprehensive RBAC & performance testing
+
 ## 📖 Documentation Structure
 
 ### For API Users
-- **[API_USAGE_GUIDE.md](API_USAGE_GUIDE.md)** - Complete usage guide (start here!)
-- **[QUICK_REFERENCE.md](QUICK_REFERENCE.md)** - Quick reference card
-- **[ERROR_CODES.md](ERROR_CODES.md)** - Error codes with solutions
-- **[CREATOR_OWNERSHIP_GUIDE.md](CREATOR_OWNERSHIP_GUIDE.md)** - Authorization model
+- **[API_USAGE_GUIDE.md](Docs/API/API_USAGE_GUIDE.md)** - Complete usage guide (start here!)
+- **[QUICK_REFERENCE.md](Docs/Reference/QUICK_REFERENCE.md)** - Quick reference card
+- **[ERROR_CODES.md](Docs/Reference/ERROR_CODES.md)** - Error codes with solutions
+- **[CREATOR_OWNERSHIP_GUIDE.md](Docs/API/CREATOR_OWNERSHIP_GUIDE.md)** - Authorization model
 
 ### For Developers
-- **[PROJECT_ANALYSIS.md](PROJECT_ANALYSIS.md)** - Complete technical deep-dive
-- **[TESTING_GUIDE.md](TESTING_GUIDE.md)** - Testing infrastructure and examples
-- **[IMPLEMENTATION_HISTORY.md](IMPLEMENTATION_HISTORY.md)** - Development timeline
+- **[PROJECT_ANALYSIS.md](Docs/Reference/PROJECT_ANALYSIS.md)** - Complete technical analysis and architecture
+- **[TESTING_GUIDE.md](Docs/Testing/TESTING_GUIDE.md)** - Testing infrastructure and examples
+- **[COVERAGE_GUIDE.md](Docs/Testing/COVERAGE_GUIDE.md)** - Code coverage setup and usage
+- **[IMPLEMENTATION_HISTORY.md](Docs/Implementation/IMPLEMENTATION_HISTORY.md)** - Development timeline
 - **[src/error_codes.py](src/error_codes.py)** - Error code registry module
 
 ### For System Admins
-- **[TROUBLESHOOTING.md](TROUBLESHOOTING.md)** - Common issues and solutions
+- **[TROUBLESHOOTING.md](Docs/Reference/TROUBLESHOOTING.md)** - Common issues and solutions
 - **[docker-compose.debug.yml](docker-compose.debug.yml)** - Service orchestration
 
 ## 🔑 Key Concepts

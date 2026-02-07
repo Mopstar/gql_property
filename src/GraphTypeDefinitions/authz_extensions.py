@@ -45,6 +45,9 @@ from uoishelpers.gqlpermissions.RbacProviderExtension import RbacProviderExtensi
 from uoishelpers.gqlpermissions.RbacInsertProviderExtension import RbacInsertProviderExtension
 from uoishelpers.gqlpermissions.UserRoleProviderExtension import UserRoleProviderExtension
 
+# Import error codes for consistent error handling
+from src.error_codes import ERROR_CODES, ERROR_CODE_DETAILS, format_error_response
+
 # Standard role constants - Comprehensive Czech university role types
 # Source: systemdata.rnd.json roletypes section
 # Organized by permission level and functional category
@@ -239,6 +242,7 @@ class AutoGroupAssignmentExtension(FieldExtension):
                         entity_input.rbacobject_id = write_groups[0]
                         kwargs['rbacobject_id'] = write_groups[0]
                 else:
+                    # User has no write groups - use error code
                     user_fullname = user.get("fullname", "Unknown")
                     user_id = user.get("id", "Unknown ID")
                     roles_str = ", ".join(all_user_roles) if all_user_roles else "NONE"
@@ -246,11 +250,22 @@ class AutoGroupAssignmentExtension(FieldExtension):
                     if len(self.required_roles) > 5:
                         required_roles_str += f" (and {len(self.required_roles) - 5} more)"
                     
+                    error_response = format_error_response(
+                        "AUTH_NO_REQUIRED_ROLE",
+                        details={
+                            "user_id": str(user_id),
+                            "user_fullname": user_fullname,
+                            "required_roles": self.required_roles[:5],
+                            "current_roles": all_user_roles
+                        }
+                    )
+
                     raise PermissionError(
-                        f"Permission denied. User '{user_fullname}' (ID: {user_id}) cannot create this entity. "
+                        f"[{error_response['code']}] {error_response['message']}. "
                         f"Required roles: [{required_roles_str}]. "
                         f"Your current roles: [{roles_str}]. "
-                        f"You need at least one of the required roles in a group to create content."
+                        f"You need at least one of the required roles in a group to create content. "
+                        f"(Error UUID: {error_response['uuid']})"
                     )
             else:
                 kwargs['rbacobject_id'] = current_rbac
@@ -318,8 +333,9 @@ class OwnershipPermissionExtension(FieldExtension):
         db_row = kwargs.get("db_row")  # Exists for UPDATE/DELETE
         
         if not user_id:
-            raise PermissionError("User not authenticated")
-        
+            error = ERROR_CODE_DETAILS["AUTH_NOT_AUTHENTICATED"]
+            raise PermissionError(f"[{error.code}] {error.message}")
+
         # Detect if this is an INSERT operation (no db_row means new entity)
         is_insert = db_row is None
         
@@ -380,9 +396,20 @@ class OwnershipPermissionExtension(FieldExtension):
         if len(self.required_roles) > 5:
             required_roles_str += f" (and {len(self.required_roles) - 5} more)"
         
+        error_response = format_error_response(
+            "AUTH_NOT_CREATOR_OR_EDITOR",
+            details={
+                "user_id": str(user_id),
+                "user_fullname": user_fullname,
+                "required_roles": self.required_roles[:5],
+                "entity_rbacobject": str(rbacobject_id) if rbacobject_id else "None"
+            }
+        )
+
         raise PermissionError(
-            f"Permission denied for {user_fullname}. You must be the creator or have one of these roles "
-            f"[{required_roles_str}] in the entity's group."
+            f"[{error_response['code']}] {error_response['message']}. "
+            f"You must be the creator or have one of these roles [{required_roles_str}] in the entity's group. "
+            f"(Error UUID: {error_response['uuid']})"
         )
 
 

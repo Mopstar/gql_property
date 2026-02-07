@@ -1,3 +1,6 @@
+                        headers: { "Content-Type": "application/json" },
+                        headers: { "Content-Type": "application/json" },
+            headers: { 'Content-Type': 'application/json' },
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -17,6 +20,20 @@
 </head>
 
 <body>
+
+    <!-- Login Status Bar -->
+    <div id="login-status" style="background: #f8f9fa; padding: 10px; border-bottom: 1px solid #dee2e6; position: sticky; top: 0; z-index: 1000;">
+        <div class="container-fluid">
+            <span id="user-info" style="font-weight: 500;">🔍 Checking authentication...</span>
+            <div style="float: right;">
+                <input type="text" id="token-input" placeholder="Paste token here" style="display: none; width: 300px; margin-right: 5px;" />
+                <button id="set-token-btn" class="btn btn-success btn-sm" style="display: none;" onclick="setTokenManually()">Set Token</button>
+                <a href="http://localhost:33001" id="login-btn" class="btn btn-primary btn-sm" style="display: none; margin-left: 5px;">
+                    🔑 Login at Frontend
+                </a>
+            </div>
+        </div>
+    </div>
 
     <!-- <div class="container-fluid p-3 bg-success bg-opacity-10 text-center">
         <h1>Přijímací řízení 2025/26</h1>
@@ -98,27 +115,111 @@ query IntrospectionQuery {
   }
 }
 `;        
+
+        // ============================================================================
+        // AUTHENTICATION TOKEN HANDLING
+        // ============================================================================
+        function getCookie(name) {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return parts.pop().split(';').shift();
+            return null;
+        }
+
+        function getAuthToken() {
+            // Try multiple cookie names
+            const cookieNames = ['authorization', 'access_token', 'accessToken', 'token', 'AUTH_TOKEN'];
+            for (const name of cookieNames) {
+                const token = getCookie(name);
+                if (token) {
+                    console.log(`✅ Found auth token in cookie: ${name}`);
+                    return token;
+                }
+            }
+
+            // Try localStorage as fallback
+            const localToken = localStorage.getItem('token') || localStorage.getItem('authorization');
+            if (localToken) {
+                console.log('✅ Found auth token in localStorage');
+                return localToken;
+            }
+
+            // Try URL parameter (for cross-origin token passing)
+            const urlParams = new URLSearchParams(window.location.search);
+            const urlToken = urlParams.get('token');
+            if (urlToken) {
+                console.log('✅ Found auth token in URL parameter');
+                // Store it for future use
+                document.cookie = `authorization=${urlToken}; path=/; max-age=86400`;
+                localStorage.setItem('authorization', urlToken);
+                // Clean up URL
+                window.history.replaceState({}, document.title, window.location.pathname);
+                return urlToken;
+            }
+
+            console.warn('⚠️ No authentication token found');
+            return null;
+        }
+
+        function setTokenManually() {
+            const tokenInput = document.getElementById('token-input');
+            const token = tokenInput.value.trim();
+            if (token) {
+                document.cookie = `authorization=${token}; path=/; max-age=86400`;
+                localStorage.setItem('authorization', token);
+                console.log('✅ Token set manually');
+                alert('Token set! Reloading page...');
+                window.location.reload();
+            } else {
+                alert('Please enter a token');
+            }
+        }
+
+        // ============================================================================
+        // FETCH WITH AUTHENTICATION
+        // ============================================================================
         const gqlUri = '/gql';
         let instrospection = "";
+
+        const authToken = getAuthToken();
+        const headers = { 'Content-Type': 'application/json' };
+
+        if (authToken) {
+            const tokenValue = authToken.startsWith('Bearer ') ? authToken : `Bearer ${authToken}`;
+            headers['Authorization'] = tokenValue;
+            console.log('✅ Including Authorization header');
+        } else {
+            console.warn('⚠️ No auth token - authentication may fail');
+        }
+
         const fetchPromise = fetch(gqlUri, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: headers,
+            credentials: 'include',
             body: JSON.stringify({ query: introspectionQuery })
         })
         .then(response => {
             if (!response.ok) {
+                console.error(`GraphQL request failed: ${response.status}`);
+                if (response.status === 401 || response.status === 403) {
+                    console.error('Authentication failed - redirecting to login');
+                    setTimeout(() => {
+                        window.location.href = 'http://localhost:33001';
+                    }, 2000);
+                }
                 throw new Error('Network response was not ok: ' + response.statusText);
             }
             return response.json();
         })
         .then(data => {
             introspection = data.data
-            return instrospection
+            console.log('✅ GraphQL introspection successful');
+            return introspection
         })
         .catch(error => {
             introspection = "ERROR"
-            // document.getElementById('content').innerHTML = 'Error loading markdown: ' + error;
-        });        
+            console.error('GraphQL introspection failed:', error);
+        });
     </script>
     
     <script>
@@ -524,9 +625,17 @@ query IntrospectionQuery {
                 const queryStr = generateQueryExample(field, typesByName);
 
                 try {
+                    const authToken = getAuthToken();
+                    const fetchHeaders = { "Content-Type": "application/json" };
+                    if (authToken) {
+                        const tokenValue = authToken.startsWith('Bearer ') ? authToken : `Bearer ${authToken}`;
+                        fetchHeaders['Authorization'] = tokenValue;
+                    }
+
                     const response = await fetch(endpointUrl, {
                         method: "POST",
-                        headers: { "Content-Type": "application/json" },
+                        headers: fetchHeaders,
+                        credentials: 'include',
                         body: JSON.stringify({ query: queryStr, variables: {} })
                     });
                     const json = await response.json();
@@ -831,9 +940,17 @@ query IntrospectionQuery {
                 }
                 setQuery(()=> gqlQuery)
                 try {
+                    const authToken = getAuthToken();
+                    const fetchHeaders = { "Content-Type": "application/json" };
+                    if (authToken) {
+                        const tokenValue = authToken.startsWith('Bearer ') ? authToken : `Bearer ${authToken}`;
+                        fetchHeaders['Authorization'] = tokenValue;
+                    }
+
                     const res = await fetch(gqlUri, {
                         method: "POST",
-                        headers: { "Content-Type": "application/json" },
+                        headers: fetchHeaders,
+                        credentials: 'include',
                         body: JSON.stringify({ query: gqlQuery, variables: variables}),
                     });
 
@@ -927,6 +1044,27 @@ query IntrospectionQuery {
                         console.log(json)
                         firstItem = {...json, ...firstItem}
                         RunApp()
+
+                        // Update authentication status
+                        const authToken = getAuthToken();
+                        const userInfo = document.getElementById('user-info');
+                        const loginBtn = document.getElementById('login-btn');
+                        const tokenInput = document.getElementById('token-input');
+                        const setTokenBtn = document.getElementById('set-token-btn');
+
+                        if (authToken) {
+                            userInfo.textContent = '✅ Authenticated';
+                            userInfo.style.color = '#28a745';
+                            console.log('✅ Page loaded with authentication');
+                        } else {
+                            userInfo.innerHTML = '⚠️ Not authenticated - <small>Login at frontend OR paste token below</small>';
+                            userInfo.style.color = '#ffc107';
+                            loginBtn.style.display = 'inline-block';
+                            tokenInput.style.display = 'inline-block';
+                            setTokenBtn.style.display = 'inline-block';
+                            console.warn('⚠️ No authentication token found');
+                            console.info('💡 To get token: Login at http://localhost:33001, open DevTools console, run: localStorage.getItem("token") or check cookies');
+                        }
                     }
                 )
             }
