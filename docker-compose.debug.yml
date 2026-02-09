@@ -12,7 +12,33 @@ services:
     build:
       context: ./proxy  # Path to the directory containing the Dockerfile
     environment:
-      - TARGET_SERVER=http://host.docker.internal:8001
+      - TARGET_SERVER=http://gql_property:8001
+    depends_on:
+      - gql_property
+
+  gql_property:
+    image: gql_property
+    restart: on-failure:3
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: uvicorn main:app --env-file environment.txt --host 0.0.0.0 --port 8001
+    environment:
+      - POSTGRES_HOST=postgres_gql:5432
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=example
+      - POSTGRES_DB=data
+      - DEMO=False
+      - DEMODATA=True
+      - GQLUG_ENDPOINT_URL=http://gql_ug:8000/gql
+      - JWTPUBLICKEYURL=http://frontend:8000/oauth/publickey
+      - JWTRESOLVEUSERPATHURL=http://frontend:8000/oauth/userinfo
+    ports:
+      - 8001:8001
+    depends_on:
+      - postgres_gql
+      - gql_ug
+      - frontend
 
   frontend:
     image: hrbolek/frontend
@@ -57,11 +83,10 @@ services:
       # SERVICES je json array popisujici jednotlive dostupne sluzby
       - PORT=3000
       - |
-        SERVICES=
-        [
-          {"name": "ug", "url": "http://gql_ug:8000/gql"},
-          {"name": "evolution", "url": "http://host.docker.internal:8001/gql"}
-        ]       
+        SERVICES=[
+          {"name":"evolution","url":"http://gql_property:8001/gql"},
+          {"name":"ug","url":"http://gql_ug:8000/gql"}
+        ]
     healthcheck:
       # definice, umoznujici provest test, zda je kontejner v poradku (vsimnete si portu a srovnejte s portem v environment)
       interval: 60s
@@ -76,6 +101,7 @@ services:
       replicas: 1
     depends_on:
       - proxy
+      - gql_property
       - gql_ug
 
 
