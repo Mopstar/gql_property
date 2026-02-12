@@ -10,7 +10,7 @@ services:
     image: proxy
     restart: unless-stopped
     build:
-      context: ../proxy  # Path to the directory containing the Dockerfile
+      context: proxy  # Path to the directory containing the Dockerfile
     environment:
       - TARGET_SERVER=http://gql_property:8001
     depends_on:

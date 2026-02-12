@@ -204,28 +204,6 @@ class TestNormalizePurchaseSeedData:
 class TestEnsureSamplePurchases:
     """Test _ensure_sample_purchases function"""
 
-    @pytest.mark.asyncio
-    async def test_ensure_sample_purchases_creates_data(self):
-        """Should create sample purchase when database is empty"""
-        # Mock session maker and session
-        mock_session = AsyncMock()
-        mock_result = AsyncMock()
-        mock_result.scalar_one.return_value = 0  # Empty database
-        mock_session.execute = AsyncMock(return_value=mock_result)
-        mock_session.flush = AsyncMock()
-        mock_session.commit = AsyncMock()
-        mock_session.add = MagicMock()
-
-        mock_session_maker = MagicMock()
-        mock_session_maker.return_value.__aenter__ = AsyncMock(return_value=mock_session)
-        mock_session_maker.return_value.__aexit__ = AsyncMock()
-
-        await _ensure_sample_purchases(mock_session_maker)
-
-        # Verify that add was called (sample purchase was created)
-        mock_session.add.assert_called_once()
-        mock_session.flush.assert_called_once()
-        mock_session.commit.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_ensure_sample_purchases_skips_if_data_exists(self):

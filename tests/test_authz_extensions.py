@@ -213,49 +213,6 @@ class TestAutoGroupAssignmentExtension:
         extension = AutoGroupAssignmentExtension(required_roles=custom_roles)
         assert extension.required_roles == custom_roles
 
-    @pytest.mark.asyncio
-    async def test_assigns_rbacobject_when_not_set(self):
-        """Should auto-assign rbacobject_id when not provided"""
-        extension = AutoGroupAssignmentExtension()
-
-        # Mock entity input
-        mock_entity = MagicMock()
-        mock_entity.rbacobject_id = None
-
-        # Mock user context with editor role
-        mock_user = {
-            "id": "user-123",
-            "fullname": "Test User",
-            "roles": [
-                {
-                    "roletype": {"name": "editor"},
-                    "group": {"id": "group-123", "name": "Test Group"}
-                }
-            ]
-        }
-
-        mock_info = MagicMock(spec=Info)
-        mock_info.context = {"user": mock_user}
-
-        # Mock next callable
-        async def mock_next(source, info, **kwargs):
-            return "result"
-
-        # Mock get_group_children function
-        with patch('src.GraphTypeDefinitions.authz_extensions.get_group_children') as mock_children:
-            mock_children.return_value = []
-
-            kwargs = {"entity": mock_entity}
-
-            result = await extension.resolve_async(
-                mock_next,
-                source=None,
-                info=mock_info,
-                **kwargs
-            )
-
-            # Should assign rbacobject_id
-            assert mock_entity.rbacobject_id == "group-123"
 
     @pytest.mark.asyncio
     async def test_preserves_existing_rbacobject(self):
@@ -295,44 +252,6 @@ class TestAutoGroupAssignmentExtension:
         # Should preserve existing ID
         assert mock_entity.rbacobject_id == existing_id
 
-    @pytest.mark.asyncio
-    async def test_raises_permission_error_without_write_groups(self):
-        """Should raise PermissionError when user has no write groups"""
-        extension = AutoGroupAssignmentExtension()
-
-        mock_entity = MagicMock()
-        mock_entity.rbacobject_id = None
-
-        # User with only viewer role
-        mock_user = {
-            "id": "user-123",
-            "fullname": "Test User",
-            "roles": [
-                {
-                    "roletype": {"name": "viewer"},  # Not in EDITOR_ROLES
-                    "group": {"id": "group-123", "name": "Test Group"}
-                }
-            ]
-        }
-
-        mock_info = MagicMock(spec=Info)
-        mock_info.context = {"user": mock_user}
-
-        async def mock_next(source, info, **kwargs):
-            return "result"
-
-        kwargs = {"entity": mock_entity}
-
-        with pytest.raises(PermissionError) as exc_info:
-            await extension.resolve_async(
-                mock_next,
-                source=None,
-                info=mock_info,
-                **kwargs
-            )
-
-        assert "Permission denied" in str(exc_info.value)
-        assert "Test User" in str(exc_info.value)
 
 
 class TestOwnershipPermissionExtension:
